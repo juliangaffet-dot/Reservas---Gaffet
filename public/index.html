@@ -636,7 +636,7 @@
     document.getElementById('resumen-preview').innerHTML =
       `<div class="resumen-row"><strong>Día</strong> ${formatDateDisplay(selectedDate)}</div>` +
       `<div class="resumen-row"><strong>Horario</strong> ${selectedSlot} hs</div>` +
-      `<div class="resumen-row"><strong>Ubicación</strong> <a class="maps-link" onclick="window.open('${MAPS_URL}','_blank')">Cmte. Piedrabuena 820, Salta ↗</a></div>`;
+      `<div class="resumen-row"><strong>Ubicación</strong> <a class="maps-link" href="${MAPS_URL}" target="_blank" rel="noopener">Cmte. Piedrabuena 820, Salta ↗</a></div>`;
     document.getElementById('error-banner').style.display = 'none';
     document.getElementById('step1').classList.remove('active');
     document.getElementById('step2').classList.add('active');
@@ -697,7 +697,7 @@
       document.getElementById('suc-detail').innerHTML =
         `<p>📅 ${formatDateDisplay(selectedDate)}</p>` +
         `<p>🕐 ${selectedSlot} hs</p>` +
-        `<p>📍 <a class="maps-link" onclick="window.open('${MAPS_URL}','_blank')" style="color:var(--green-700)">Cmte. Piedrabuena 820, Salta</a></p>` +
+        `<p>📍 <a class="maps-link" href="${MAPS_URL}" target="_blank" rel="noopener" style="color:var(--green-700)">Cmte. Piedrabuena 820, Salta</a></p>` +
         (acomp ? `<p>👥 Acompañante: ${acomp}</p>` : '');
 
       document.getElementById('step2').classList.remove('active');
