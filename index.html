@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reservar Turno — Lic. Julián Gaffet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green-50: #E1F5EE;
+      --green-100: #9FE1CB;
+      --green-500: #1D9E75;
+      --green-700: #0F6E56;
+      --green-900: #04342C;
+      --amber-50: #FAEEDA;
+      --amber-800: #633806;
+      --gray-50: #F8F7F4;
+      --gray-100: #EFEFEB;
+      --gray-300: #D3D1C7;
+      --gray-500: #888780;
+      --gray-700: #444441;
+      --gray-900: #1A1A18;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    .page-wrapper {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: white;
+      box-shadow: 0 0 60px rgba(0,0,0,0.06);
+    }
+
+    .hero {
+      background: var(--green-900);
+      padding: 2rem 1.5rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: rgba(29,158,117,0.15);
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -20px; left: 30px;
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: rgba(29,158,117,0.08);
+    }
+
+    .avatar-ring {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--green-500);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      color: white;
+      margin-bottom: 14px;
+      position: relative; z-index: 1;
+    }
+
+    .hero-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px;
+      color: white;
+      line-height: 1.2;
+      margin-bottom: 4px;
+      position: relative; z-index: 1;
+    }
+    .hero-mp {
+      font-size: 13px;
+      color: var(--green-100);
+      margin-bottom: 14px;
+      position: relative; z-index: 1;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      position: relative; z-index: 1;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.1);
+      color: var(--green-100);
+      border: 0.5px solid rgba(255,255,255,0.15);
+    }
+
+    .content { padding: 1.5rem; }
+
+    .step { display: none; }
+    .step.active { display: block; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 12px;
+    }
+
+    .week-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .week-nav button {
+      width: 32px; height: 32px;
+      border: 0.5px solid var(--gray-300);
+      border-radius: var(--radius-sm);
+      background: white;
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--gray-700);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .week-nav button:hover { background: var(--gray-100); }
+    .week-label { font-size: 14px; font-weight: 500; color: var(--gray-700); }
+
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 1.5rem;
+    }
+    .day-card {
+      background: white;
+      border: 0.5px solid var(--gray-300);
+      border-radius: var(--radius-md);
+      padding: 10px 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .day-card:hover { border-color: var(--green-500); }
+    .day-card.selected { background: var(--green-50); border: 1.5px solid var(--green-500); }
+    .day-card.past { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+    .day-name { font-size: 11px; color: var(--gray-500); margin-bottom: 4px; }
+    .day-number { font-size: 18px; font-weight: 500; color: var(--gray-900); }
+    .day-card.selected .day-name { color: var(--green-700); }
+    .day-card.selected .day-number { color: var(--green-700); }
+
+    .slots-section { margin-bottom: 1.25rem; }
+    .slots-section-title {
+      font-size: 12px; color: var(--gray-500);
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .slots-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+
+    .slot-btn {
+      background: white;
+      border: 0.5px solid var(--gray-300);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-900);
+      cursor: pointer;
+      text-align: center;
+      min-width: 80px;
+      transition: all 0.15s;
+    }
+    .slot-btn:hover:not(.full):not(.loading) { border-color: var(--green-500); background: var(--green-50); }
+    .slot-btn.selected { background: var(--green-50); border: 1.5px solid var(--green-500); color: var(--green-700); }
+    .slot-btn.full { background: var(--gray-100); color: var(--gray-500); cursor: not-allowed; text-decoration: line-through; }
+    .slot-btn.loading { opacity: 0.5; cursor: wait; }
+    .cupos-tag {
+      display: block; font-size: 10px; font-weight: 400;
+      margin-top: 2px;
+    }
+    .cupos-tag.ok { color: var(--green-500); }
+    .cupos-tag.last { color: var(--amber-800); }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block; font-size: 12px; font-weight: 500;
+      color: var(--gray-500); margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .form-group input {
+      width: 100%;
+      border: 0.5px solid var(--gray-300);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      color: var(--gray-900);
+      background: white;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--green-500);
+      box-shadow: 0 0 0 3px rgba(29,158,117,0.1);
+    }
+
+    .resumen-box {
+      background: var(--green-50);
+      border: 0.5px solid var(--green-100);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .resumen-row {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 14px; color: var(--green-900);
+      margin-bottom: 6px;
+    }
+    .resumen-row:last-child { margin-bottom: 0; }
+    .resumen-row strong { font-weight: 500; min-width: 72px; display: inline-block; }
+    .maps-link {
+      color: var(--green-700); text-decoration: underline;
+      cursor: pointer; font-size: 14px;
+    }
+
+    .acomp-toggle {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      border: 0.5px solid var(--gray-300);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      margin-bottom: 1rem;
+      transition: all 0.15s;
+      background: white;
+    }
+    .acomp-toggle:hover { border-color: var(--green-500); background: var(--green-50); }
+    .acomp-toggle.active { border: 1.5px solid var(--green-500); background: var(--green-50); }
+    .acomp-toggle-icon { font-size: 20px; color: var(--gray-500); }
+    .acomp-toggle.active .acomp-toggle-icon { color: var(--green-500); }
+    .acomp-toggle-text { flex: 1; }
+    .acomp-toggle-text strong { font-size: 14px; font-weight: 500; display: block; color: var(--gray-900); }
+    .acomp-toggle.active .acomp-toggle-text strong { color: var(--green-700); }
+    .acomp-toggle-text span { font-size: 12px; color: var(--gray-500); }
+    .acomp-check {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 0.5px solid var(--gray-300);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: transparent;
+      transition: all 0.15s;
+    }
+    .acomp-toggle.active .acomp-check { background: var(--green-500); border-color: var(--green-500); color: white; }
+
+    .acomp-form {
+      display: none;
+      background: var(--gray-50);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      border: 0.5px solid var(--gray-300);
+    }
+    .acomp-form.visible { display: block; }
+    .acomp-form .form-group { margin-bottom: 0.75rem; }
+    .acomp-form .form-group:last-child { margin-bottom: 0; }
+
+    .info-note {
+      display: flex; align-items: flex-start; gap: 8px;
+      background: var(--gray-50);
+      border: 0.5px solid var(--gray-300);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-bottom: 1rem;
+      font-size: 13px;
+      color: var(--gray-700);
+      line-height: 1.5;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--green-500); color: white; }
+    .btn-primary:hover:not(:disabled) { background: var(--green-700); }
+    .btn-primary:disabled { background: var(--gray-300); color: var(--gray-500); cursor: not-allowed; }
+    .btn-ghost {
+      background: none; width: auto;
+      border: 0.5px solid var(--gray-300);
+      color: var(--gray-700);
+      padding: 9px 16px;
+      margin-bottom: 1rem;
+      font-size: 14px;
+    }
+    .btn-ghost:hover { background: var(--gray-100); }
+
+    .btn-spinner { display: none; }
+    .btn-primary.loading .btn-text { display: none; }
+    .btn-primary.loading .btn-spinner { display: inline; }
+
+    .success-screen {
+      text-align: center;
+      padding: 2.5rem 1rem 2rem;
+    }
+    .success-circle {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--green-50);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.25rem;
+      font-size: 36px;
+    }
+    .success-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px;
+      margin-bottom: 6px;
+      color: var(--gray-900);
+    }
+    .success-sub { font-size: 14px; color: var(--gray-500); margin-bottom: 4px; }
+    .success-detail {
+      background: var(--green-50);
+      border: 0.5px solid var(--green-100);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin: 1.25rem 0;
+      text-align: left;
+    }
+    .success-detail p { font-size: 14px; color: var(--green-900); margin-bottom: 5px; }
+    .success-detail p:last-child { margin-bottom: 0; }
+    .error-banner {
+      display: none;
+      background: #FCEBEB;
+      border: 0.5px solid #F09595;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #A32D2D;
+      margin-bottom: 1rem;
+    }
+
+    @media (max-width: 480px) {
+      .hero { padding: 1.5rem 1.25rem 1.25rem; }
+      .content { padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <div class="hero">
+    <div class="avatar-ring">JG</div>
+    <div class="hero-name">Lic. Julián Gaffet</div>
+    <div class="hero-mp">M.P.: 1321</div>
+    <div class="hero-meta">
+      <span class="hero-badge">📅 Reservar turno</span>
+      <span class="hero-badge">📍 Cmte. Piedrabuena 820</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- PASO 1: Elegir día y horario -->
+    <div id="step1" class="step active">
+      <p class="section-label">Elegí el día</p>
+      <div class="week-nav">
+        <button onclick="changeWeek(-1)">&#8249;</button>
+        <span class="week-label" id="week-label"></span>
+        <button onclick="changeWeek(1)">&#8250;</button>
+      </div>
+      <div class="days-grid" id="days-grid"></div>
+
+      <div id="slots-container" style="display:none;">
+        <p class="section-label">Elegí el horario</p>
+        <div class="slots-section">
+          <p class="slots-section-title">☀️ Mañana</p>
+          <div class="slots-grid" id="slots-manana"></div>
+        </div>
+        <div class="slots-section">
+          <p class="slots-section-title">🌙 Tarde</p>
+          <div class="slots-grid" id="slots-tarde"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem;">
+        <button class="btn btn-primary" id="btn-continuar" onclick="goToStep2()" disabled>
+          <span class="btn-text">Continuar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- PASO 2: Datos del paciente -->
+    <div id="step2" class="step">
+      <button class="btn btn-ghost" onclick="goToStep1()">← Volver</button>
+      <div class="resumen-box" id="resumen-preview"></div>
+
+      <p class="section-label">Tus datos</p>
+      <div class="info-note">
+        📧 Recibirás una invitación en tu email con recordatorio 30 minutos antes.
+      </div>
+
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="inp-nombre" placeholder="Ej: María López" oninput="validateForm()">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="tel" id="inp-telefono" placeholder="Ej: 387 123-4567" oninput="validateForm()">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="inp-email" placeholder="Ej: maria@email.com" oninput="validateForm()">
+      </div>
+
+      <div class="acomp-toggle" id="acomp-toggle" onclick="toggleAcomp()">
+        <span class="acomp-toggle-icon">👥</span>
+        <div class="acomp-toggle-text">
+          <strong>Agregar acompañante</strong>
+          <span id="acomp-sub">Opcional — reserva 2 cupos en el mismo horario</span>
+        </div>
+        <div class="acomp-check" id="acomp-check">✓</div>
+      </div>
+
+      <div class="acomp-form" id="acomp-form">
+        <p style="font-size:13px;font-weight:500;color:var(--gray-500);margin-bottom:12px;">Datos del acompañante</p>
+        <div class="form-group">
+          <label>Nombre completo</label>
+          <input type="text" id="inp-acomp-nombre" placeholder="Ej: Juan López" oninput="validateForm()">
+        </div>
+        <div class="form-group">
+          <label>Teléfono <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></label>
+          <input type="tel" id="inp-acomp-tel" placeholder="Ej: 387 765-4321">
+        </div>
+      </div>
+
+      <div class="error-banner" id="error-banner"></div>
+      <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarTurno()" disabled>
+        <span class="btn-text">Confirmar turno</span>
+        <span class="btn-spinner">Confirmando...</span>
+      </button>
+    </div>
+
+    <!-- PASO 3: Confirmación -->
+    <div id="step3" class="step">
+      <div class="success-screen">
+        <div class="success-circle">✅</div>
+        <div class="success-title">¡Turno confirmado!</div>
+        <p class="success-sub" id="suc-nombre"></p>
+        <div class="success-detail" id="suc-detail"></div>
+        <p style="font-size:13px;color:var(--gray-500);margin-bottom:1.5rem;">
+          Revisá tu email — te llegará una invitación de Google Calendar con recordatorio 30 min antes.
+        </p>
+        <button class="btn btn-primary" onclick="resetApp()">Reservar otro turno</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const API_BASE = '';  // vacío = mismo servidor; o poné 'https://tu-backend.railway.app'
+  const CAPACIDAD_MANANA = 4;
+  const CAPACIDAD_TARDE  = 2;
+  const MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=Cmte.+Piedrabuena+820+Salta+Argentina';
+
+  const reservasLocales = {};
+  let cuposDelDia = {};
+  let conAcomp = false;
+  let currentWeekOffset = 0;
+  let selectedDate = null;
+  let selectedSlot = null;
+  let selectedCap = null;
+
+  function pad(n) { return String(n).padStart(2,'0'); }
+  function getKey(d, s) { return d + '_' + s; }
+
+  function getCuposUsados(fecha, slot) {
+    const local = reservasLocales[getKey(fecha, slot)] || 0;
+    const remoto = cuposDelDia[slot] || 0;
+    return local + remoto;
+  }
+
+  function getSlotsManana() { return ['08:00']; }
+
+  function getSlotsTarde(dateStr) {
+    const dow = new Date(dateStr + 'T12:00:00').getDay();
+    const endMin = dow === 3 ? 19*60 : 21*60;
+    const slots = [];
+    for (let m = 16*60+30; m < endMin; m += 30)
+      slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+    return slots;
+  }
+
+  function getWeekDates(offset) {
+    const today = new Date();
+    const dow = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
+    return Array.from({length:5}, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+  }
+
+  function formatDate(d) {
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  }
+
+  function formatDateDisplay(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const days = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return days[d.getDay()] + ' ' + d.getDate() + ' de ' + months[d.getMonth()];
+  }
+
+  function renderWeek() {
+    const days = getWeekDates(currentWeekOffset);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const names = ['Lun','Mar','Mié','Jue','Vie'];
+    const grid = document.getElementById('days-grid');
+    grid.innerHTML = '';
+    days.forEach((d, i) => {
+      const ds = formatDate(d);
+      const div = document.createElement('div');
+      div.className = 'day-card' + (d < today ? ' past' : '') + (ds === selectedDate ? ' selected' : '');
+      div.innerHTML = `<div class="day-name">${names[i]}</div><div class="day-number">${d.getDate()}</div>`;
+      if (d >= today) div.onclick = () => selectDay(ds);
+      grid.appendChild(div);
+    });
+    const first = days[0], last = days[4];
+    const mo = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    document.getElementById('week-label').textContent =
+      first.getDate() + ' ' + mo[first.getMonth()] + ' – ' + last.getDate() + ' ' + mo[last.getMonth()];
+  }
+
+  async function selectDay(dateStr) {
+    selectedDate = dateStr;
+    selectedSlot = null; selectedCap = null;
+    document.getElementById('btn-continuar').disabled = true;
+    document.getElementById('slots-container').style.display = 'none';
+    renderWeek();
+    cuposDelDia = {};
+    try {
+      const r = await fetch(`${API_BASE}/api/cupos?fecha=${dateStr}`);
+      const data = await r.json();
+      cuposDelDia = data.cupos || {};
+    } catch(e) { cuposDelDia = {}; }
+    renderSlots();
+    document.getElementById('slots-container').style.display = 'block';
+  }
+
+  function renderSlots() {
+    renderSlotGroup('slots-manana', selectedDate, getSlotsManana(), CAPACIDAD_MANANA);
+    renderSlotGroup('slots-tarde', selectedDate, getSlotsTarde(selectedDate), CAPACIDAD_TARDE);
+  }
+
+  function renderSlotGroup(id, dateStr, slots, cap) {
+    const c = document.getElementById(id);
+    c.innerHTML = '';
+    if (!slots.length) { c.innerHTML = '<span style="font-size:13px;color:var(--gray-500)">Sin horarios</span>'; return; }
+    slots.forEach(slot => {
+      const usado = getCuposUsados(dateStr, slot);
+      const disp = cap - usado;
+      const isFull = disp <= 0;
+      const isSel = slot === selectedSlot;
+      const btn = document.createElement('button');
+      btn.className = 'slot-btn' + (isFull ? ' full' : '') + (isSel ? ' selected' : '');
+      let tag = '';
+      if (!isFull) tag = disp === 1
+        ? `<span class="cupos-tag last">último cupo</span>`
+        : `<span class="cupos-tag ok">${disp} cupos</span>`;
+      btn.innerHTML = `<div>${slot}</div>${tag}`;
+      if (!isFull) btn.onclick = () => selectSlot(slot, cap);
+      c.appendChild(btn);
+    });
+  }
+
+  function selectSlot(slot, cap) {
+    selectedSlot = slot; selectedCap = cap;
+    document.getElementById('btn-continuar').disabled = false;
+    renderSlots();
+  }
+
+  function changeWeek(dir) {
+    currentWeekOffset = Math.max(0, currentWeekOffset + dir);
+    selectedDate = null; selectedSlot = null; selectedCap = null;
+    document.getElementById('slots-container').style.display = 'none';
+    document.getElementById('btn-continuar').disabled = true;
+    renderWeek();
+  }
+
+  function goToStep2() {
+    conAcomp = false;
+    document.getElementById('acomp-toggle').classList.remove('active');
+    document.getElementById('acomp-form').classList.remove('visible');
+    document.getElementById('inp-acomp-nombre').value = '';
+    document.getElementById('inp-acomp-tel').value = '';
+    const usado = getCuposUsados(selectedDate, selectedSlot);
+    const disp = selectedCap - usado;
+    const tog = document.getElementById('acomp-toggle');
+    const sub = document.getElementById('acomp-sub');
+    if (disp < 2) {
+      tog.style.opacity = '0.4'; tog.style.pointerEvents = 'none';
+      sub.textContent = 'No hay cupo para acompañante en este horario';
+    } else {
+      tog.style.opacity = '1'; tog.style.pointerEvents = 'auto';
+      sub.textContent = 'Opcional — reserva 2 cupos en el mismo horario';
+    }
+    document.getElementById('resumen-preview').innerHTML =
+      `<div class="resumen-row"><strong>Día</strong> ${formatDateDisplay(selectedDate)}</div>` +
+      `<div class="resumen-row"><strong>Horario</strong> ${selectedSlot} hs</div>` +
+      `<div class="resumen-row"><strong>Ubicación</strong> <a class="maps-link" onclick="window.open('${MAPS_URL}','_blank')">Cmte. Piedrabuena 820, Salta ↗</a></div>`;
+    document.getElementById('error-banner').style.display = 'none';
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('step2').classList.add('active');
+    validateForm();
+  }
+
+  function goToStep1() {
+    conAcomp = false;
+    document.getElementById('acomp-toggle').classList.remove('active');
+    document.getElementById('acomp-form').classList.remove('visible');
+    document.getElementById('step2').classList.remove('active');
+    document.getElementById('step1').classList.add('active');
+  }
+
+  function toggleAcomp() {
+    const disp = selectedCap - getCuposUsados(selectedDate, selectedSlot);
+    if (!conAcomp && disp < 2) { alert('Solo queda 1 cupo en este horario.'); return; }
+    conAcomp = !conAcomp;
+    document.getElementById('acomp-toggle').classList.toggle('active', conAcomp);
+    document.getElementById('acomp-form').classList.toggle('visible', conAcomp);
+    if (!conAcomp) { document.getElementById('inp-acomp-nombre').value = ''; document.getElementById('inp-acomp-tel').value = ''; }
+    validateForm();
+  }
+
+  function validateForm() {
+    const n = document.getElementById('inp-nombre').value.trim();
+    const t = document.getElementById('inp-telefono').value.trim();
+    const e = document.getElementById('inp-email').value.trim();
+    let ok = n && t && e && e.includes('@');
+    if (conAcomp) ok = ok && document.getElementById('inp-acomp-nombre').value.trim();
+    document.getElementById('btn-confirmar').disabled = !ok;
+  }
+
+  async function confirmarTurno() {
+    const btn = document.getElementById('btn-confirmar');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    document.getElementById('error-banner').style.display = 'none';
+
+    const nombre   = document.getElementById('inp-nombre').value.trim();
+    const telefono = document.getElementById('inp-telefono').value.trim();
+    const email    = document.getElementById('inp-email').value.trim();
+    const acomp    = conAcomp ? document.getElementById('inp-acomp-nombre').value.trim() : null;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/reservar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, email, telefono, fecha: selectedDate, hora: selectedSlot, acompanante: acomp }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Error al reservar');
+
+      const cuposUsados = conAcomp ? 2 : 1;
+      reservasLocales[getKey(selectedDate, selectedSlot)] = (reservasLocales[getKey(selectedDate, selectedSlot)] || 0) + cuposUsados;
+
+      document.getElementById('suc-nombre').textContent = nombre + (acomp ? ' + ' + acomp : '');
+      document.getElementById('suc-detail').innerHTML =
+        `<p>📅 ${formatDateDisplay(selectedDate)}</p>` +
+        `<p>🕐 ${selectedSlot} hs</p>` +
+        `<p>📍 <a class="maps-link" onclick="window.open('${MAPS_URL}','_blank')" style="color:var(--green-700)">Cmte. Piedrabuena 820, Salta</a></p>` +
+        (acomp ? `<p>👥 Acompañante: ${acomp}</p>` : '');
+
+      document.getElementById('step2').classList.remove('active');
+      document.getElementById('step3').classList.add('active');
+
+    } catch(err) {
+      const banner = document.getElementById('error-banner');
+      banner.style.display = 'block';
+      banner.textContent = '⚠️ ' + (err.message || 'No se pudo confirmar el turno. Intentá de nuevo.');
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      validateForm();
+    }
+  }
+
+  function resetApp() {
+    selectedDate = null; selectedSlot = null; selectedCap = null; conAcomp = false; cuposDelDia = {};
+    ['inp-nombre','inp-telefono','inp-email','inp-acomp-nombre','inp-acomp-tel'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('slots-container').style.display = 'none';
+    document.getElementById('btn-continuar').disabled = true;
+    document.getElementById('acomp-toggle').classList.remove('active');
+    document.getElementById('acomp-form').classList.remove('visible');
+    document.getElementById('step3').classList.remove('active');
+    document.getElementById('step1').classList.add('active');
+    renderWeek();
+  }
+
+  renderWeek();
+</script>
+</body>
+</html>
