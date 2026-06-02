@@ -14,6 +14,7 @@ const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.REDIRECT_URI || 'http://localhost:3000/auth/callback';
 const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const REFRESH_TOKEN_MAURO = process.env.GOOGLE_REFRESH_TOKEN_MAURO;
+const REFRESH_TOKEN_ESTEBAN = process.env.GOOGLE_REFRESH_TOKEN_ESTEBAN;
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── PROFESIONALES ────────────────────────────────────────────────────────────
@@ -35,6 +36,14 @@ const PROFESIONALES = {
     horarios: {
       manana: { dias: [1,2,3,4], inicio: '09:00', fin: '12:00' },
       tarde:  { dias: [1,2,3,4,5], inicio: '15:00', fin: '19:00', finViernes: '18:00' }
+    }
+  },
+  esteban: {
+    nombre: 'Lic. Esteban Videla',
+    mp: '1337',
+    refreshToken: () => process.env.GOOGLE_REFRESH_TOKEN_ESTEBAN,
+    horarios: {
+      tarde: { dias: [1,2,3,4,5], inicio: '15:00', fin: '20:00' }
     }
   }
 };
