@@ -122,6 +122,15 @@ app.get('/api/cupos', async (req, res) => {
 
     const PALABRAS_BLOQUEO = ['bloqueado', 'no disponible', 'feriado', 'cerrado', 'ocupado', 'no atiende'];
 
+    // Generar todos los slots posibles del día (cada 30 min de 06:00 a 23:30)
+    function timeToMinutes(hhmm) {
+      const [h, m] = hhmm.split(':').map(Number);
+      return h * 60 + m;
+    }
+    function minutesToTime(mins) {
+      return String(Math.floor(mins/60)).padStart(2,'0') + ':' + String(mins%60).padStart(2,'0');
+    }
+
     eventos.forEach(ev => {
       const titulo = (ev.summary || '').toLowerCase().trim();
       const esBloqueo = PALABRAS_BLOQUEO.some(p => titulo.includes(p));
@@ -133,13 +142,19 @@ app.get('/api/cupos', async (req, res) => {
       }
 
       if (!ev.start?.dateTime) return;
-      const hora = ev.start.dateTime.substring(11, 16); // "HH:MM"
+
+      const horaInicio = ev.start.dateTime.substring(11, 16); // "HH:MM"
+      const horaFin = ev.end?.dateTime ? ev.end.dateTime.substring(11, 16) : horaInicio;
 
       if (esBloqueo) {
-        // Marcar como bloqueado completamente (999 cupos para que siempre aparezca lleno)
-        cupos[hora] = 999;
+        // Bloquear todos los slots de 30 min dentro del rango del evento
+        const inicioMins = timeToMinutes(horaInicio);
+        const finMins = timeToMinutes(horaFin);
+        for (let m = inicioMins; m < finMins; m += 30) {
+          cupos[minutesToTime(m)] = 999;
+        }
       } else {
-        cupos[hora] = (cupos[hora] || 0) + 1;
+        cupos[horaInicio] = (cupos[horaInicio] || 0) + 1;
       }
     });
 
