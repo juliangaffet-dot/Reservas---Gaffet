@@ -598,6 +598,12 @@
       const r = await fetch(`${API_BASE}/api/cupos?fecha=${dateStr}`);
       const data = await r.json();
       cuposDelDia = data.cupos || {};
+      if (data.diaBloqueado) {
+        document.getElementById('slots-container').style.display = 'block';
+        document.getElementById('slots-manana').innerHTML = '<span style="font-size:13px;color:#A32D2D;">&#128683; No hay atención este día</span>';
+        document.getElementById('slots-tarde').innerHTML = '';
+        return;
+      }
     } catch(e) { cuposDelDia = {}; }
     renderSlots();
     document.getElementById('slots-container').style.display = 'block';
