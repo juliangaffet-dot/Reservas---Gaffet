@@ -378,6 +378,28 @@
     }
     .carrito-item-remove:hover { color: #A32D2D; }
 
+    .prof-card {
+      display: flex; align-items: center; gap: 14px;
+      background: white;
+      border: 0.5px solid var(--gray-300);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .prof-card:hover { border-color: var(--green-500); background: var(--green-50); }
+    .prof-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--green-500);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Serif Display', serif;
+      font-size: 16px; font-weight: 500; color: white; flex-shrink: 0;
+    }
+    .prof-info { flex: 1; }
+    .prof-nombre { font-size: 15px; font-weight: 500; color: var(--gray-900); }
+    .prof-mp { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+    .prof-arrow { font-size: 20px; color: var(--gray-500); }
+
     @media (max-width: 480px) {
       .hero { padding: 1.5rem 1.25rem 1.25rem; }
       .content { padding: 1.25rem; }
@@ -523,6 +545,7 @@
   let selectedCap = null;
   let carrito = [];
   const MAX_TURNOS = 5;
+  let profesionalActual = null;
 
   function pad(n) { return String(n).padStart(2,'0'); }
   function getKey(d, s) { return d + '_' + s; }
@@ -567,6 +590,54 @@
     return days[d.getDay()] + ' ' + d.getDate() + ' de ' + months[d.getMonth()];
   }
 
+  async function cargarProfesionales() {
+    try {
+      const r = await fetch('/api/profesionales');
+      const data = await r.json();
+      const grid = document.getElementById('profesionales-grid');
+      grid.innerHTML = '';
+      data.profesionales.forEach(p => {
+        const iniciales = p.nombre.split(' ').filter(w => w.length > 2).slice(0,2).map(w => w[0]).join('');
+        const div = document.createElement('div');
+        div.className = 'prof-card';
+        div.innerHTML =
+          '<div class="prof-avatar">' + iniciales + '</div>' +
+          '<div class="prof-info">' +
+            '<div class="prof-nombre">' + p.nombre + '</div>' +
+            '<div class="prof-mp">M.P.: ' + p.mp + '</div>' +
+          '</div>' +
+          '<div class="prof-arrow">›</div>';
+        div.onclick = () => seleccionarProfesional(p);
+        grid.appendChild(div);
+      });
+    } catch(e) { console.error('Error cargando profesionales', e); }
+  }
+
+  function seleccionarProfesional(prof) {
+    profesionalActual = prof;
+    // Update badge
+    const iniciales = prof.nombre.split(' ').filter(w => w.length > 2).slice(0,2).map(w => w[0]).join('');
+    document.getElementById('prof-badge-avatar').textContent = iniciales;
+    document.getElementById('prof-badge-nombre').textContent = prof.nombre;
+    document.getElementById('prof-badge-mp').textContent = 'M.P.: ' + prof.mp;
+    // Show step1
+    document.getElementById('step0').classList.remove('active');
+    document.getElementById('step1').classList.add('active');
+    carrito = [];
+    selectedDate = null; selectedSlot = null;
+    document.getElementById('slots-container').style.display = 'none';
+    document.getElementById('carrito-container').style.display = 'none';
+    document.getElementById('btn-continuar').disabled = true;
+    renderWeek();
+  }
+
+  function volverAProfesionales() {
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('step0').classList.add('active');
+    carrito = [];
+    selectedDate = null; selectedSlot = null;
+  }
+
   function renderWeek() {
     const days = getWeekDates(currentWeekOffset);
     const today = new Date(); today.setHours(0,0,0,0);
@@ -595,7 +666,8 @@
     renderWeek();
     cuposDelDia = {};
     try {
-      const r = await fetch(`${API_BASE}/api/cupos?fecha=${dateStr}`);
+      const profId = profesionalActual ? profesionalActual.id : 'julian';
+      const r = await fetch(`${API_BASE}/api/cupos?fecha=${dateStr}&profesional=${profId}`);
       const data = await r.json();
       cuposDelDia = data.cupos || {};
       if (data.diaBloqueado) {
@@ -819,7 +891,7 @@
         const res = await fetch(`${API_BASE}/api/reservar`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, email, telefono, fecha: turno.fecha, hora: turno.slot, acompanante: acomp }),
+          body: JSON.stringify({ nombre, email, telefono, fecha: turno.fecha, hora: turno.slot, acompanante: acomp, profesional: profesionalActual ? profesionalActual.id : 'julian' }),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'Error al reservar');
@@ -862,7 +934,7 @@
     renderWeek();
   }
 
-  renderWeek();
+  cargarProfesionales();
 </script>
 </body>
 </html>
