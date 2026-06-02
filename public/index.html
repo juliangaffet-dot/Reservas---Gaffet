@@ -390,7 +390,7 @@
     .prof-card:hover { border-color: var(--green-500); background: var(--green-50); }
     .prof-avatar {
       width: 48px; height: 48px; border-radius: 50%;
-      background: var(--green-500);
+      background: #2D4A3E;
       display: flex; align-items: center; justify-content: center;
       font-family: 'DM Serif Display', serif;
       font-size: 16px; font-weight: 500; color: white; flex-shrink: 0;
@@ -432,7 +432,7 @@
     <div id="step1" class="step">
       <button class="btn btn-ghost" onclick="volverAProfesionales()">← Volver</button>
       <div id="prof-seleccionado-badge" style="display:flex; align-items:center; gap:10px; background:var(--green-50); border:0.5px solid var(--green-100); border-radius:12px; padding:10px 14px; margin-bottom:1.25rem;">
-        <div id="prof-badge-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--green-500);display:flex;align-items:center;justify-content:center;font-weight:500;color:white;font-size:13px;flex-shrink:0;"></div>
+        <div id="prof-badge-avatar" style="width:36px;height:36px;border-radius:50%;background:#2D4A3E;display:flex;align-items:center;justify-content:center;font-weight:500;color:white;font-size:13px;flex-shrink:0;"></div>
         <div>
           <div id="prof-badge-nombre" style="font-size:14px;font-weight:500;color:var(--green-900);"></div>
           <div id="prof-badge-mp" style="font-size:12px;color:var(--green-700);"></div>
@@ -633,7 +633,9 @@
       const grid = document.getElementById('profesionales-grid');
       grid.innerHTML = '';
       data.profesionales.forEach(p => {
-        const iniciales = p.nombre.split(' ').filter(w => w.length > 2).slice(0,2).map(w => w[0]).join('');
+        // Use specific initials: first letter of first name + first letter of last name
+      const palabras = p.nombre.replace('Lic. ', '').split(' ');
+      const iniciales = palabras.length >= 2 ? palabras[0][0] + palabras[palabras.length-1][0] : palabras[0].substring(0,2);
         const div = document.createElement('div');
         div.className = 'prof-card';
         div.innerHTML =
@@ -652,7 +654,8 @@
   function seleccionarProfesional(prof) {
     profesionalActual = prof;
     // Update badge
-    const iniciales = prof.nombre.split(' ').filter(w => w.length > 2).slice(0,2).map(w => w[0]).join('');
+    const palabras = prof.nombre.replace('Lic. ', '').split(' ');
+    const iniciales = palabras.length >= 2 ? palabras[0][0] + palabras[palabras.length-1][0] : palabras[0].substring(0,2);
     document.getElementById('prof-badge-avatar').textContent = iniciales;
     document.getElementById('prof-badge-nombre').textContent = prof.nombre;
     document.getElementById('prof-badge-mp').textContent = 'M.P.: ' + prof.mp;
