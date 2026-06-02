@@ -640,9 +640,58 @@
   }
 
   function selectSlot(slot, cap) {
-    selectedSlot = slot; selectedCap = cap;
-    document.getElementById('btn-continuar').disabled = false;
+    const yaEsta = carrito.find(t => t.fecha === selectedDate && t.slot === slot);
+    if (yaEsta) return;
+    if (carrito.length >= MAX_TURNOS) {
+      alert('Podés agregar hasta ' + MAX_TURNOS + ' turnos a la vez.');
+      return;
+    }
+    carrito.push({ fecha: selectedDate, slot, cap, fechaDisplay: formatDateDisplay(selectedDate) });
+    selectedSlot = slot;
+    selectedCap = cap;
     renderSlots();
+    renderCarrito();
+    document.getElementById('btn-continuar').disabled = false;
+  }
+
+  function removeFromCarrito(index) {
+    carrito.splice(index, 1);
+    renderSlots();
+    renderCarrito();
+    document.getElementById('btn-continuar').disabled = carrito.length === 0;
+  }
+
+  function mostrarSlotsParaAgregar() {
+    selectedDate = null;
+    selectedSlot = null;
+    document.getElementById('slots-container').style.display = 'none';
+    renderWeek();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+
+  function renderCarrito() {
+    const lista = document.getElementById('carrito-lista');
+    const container = document.getElementById('carrito-container');
+    const count = document.getElementById('carrito-count');
+    const btnAgregar = document.getElementById('btn-agregar-mas');
+    if (carrito.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = 'block';
+    count.textContent = '(' + carrito.length + '/' + MAX_TURNOS + ')';
+    lista.innerHTML = '';
+    carrito.forEach(function(t, i) {
+      const div = document.createElement('div');
+      div.className = 'carrito-item';
+      div.innerHTML = '<div class="carrito-item-info">' +
+        '<div class="carrito-item-dia">&#128197; ' + t.fechaDisplay + '</div>' +
+        '<div class="carrito-item-hora">&#128336; ' + t.slot + ' hs</div>' +
+        '</div>' +
+        '<button class="carrito-item-remove" onclick="removeFromCarrito(' + i + ')" title="Quitar">&#10005;</button>';
+      lista.appendChild(div);
+    });
+    btnAgregar.style.display = carrito.length >= MAX_TURNOS ? 'none' : 'block';
   }
 
   function changeWeek(dir) {
