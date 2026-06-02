@@ -9,11 +9,35 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── CONFIGURACIÓN GOOGLE CALENDAR ───────────────────────────────────────────
-// Reemplazá estos valores con los tuyos de Google Cloud Console
 const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.REDIRECT_URI || 'http://localhost:3000/auth/callback';
 const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
+const REFRESH_TOKEN_MAURO = process.env.GOOGLE_REFRESH_TOKEN_MAURO;
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── PROFESIONALES ────────────────────────────────────────────────────────────
+const PROFESIONALES = {
+  julian: {
+    nombre: 'Lic. Julián Gaffet',
+    mp: '1321',
+    refreshToken: () => process.env.GOOGLE_REFRESH_TOKEN,
+    horarios: {
+      // lun=1, mar=2, mie=3, jue=4, vie=5
+      manana: { dias: [1,2,3,4,5], inicio: '08:00', fin: '09:00' },
+      tarde:  { dias: [1,2,3,4], inicio: '16:30', fin: '21:00', finMiercoles: '19:00' }
+    }
+  },
+  mauro: {
+    nombre: 'Lic. Mauro Ayub',
+    mp: '1263',
+    refreshToken: () => process.env.GOOGLE_REFRESH_TOKEN_MAURO,
+    horarios: {
+      manana: { dias: [1,2,3,4], inicio: '09:00', fin: '12:00' },
+      tarde:  { dias: [1,2,3,4,5], inicio: '15:00', fin: '19:00', finViernes: '18:00' }
+    }
+  }
+};
 // ─────────────────────────────────────────────────────────────────────────────
 
 const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
@@ -46,7 +70,8 @@ app.post('/api/reservar', async (req, res) => {
       return res.status(400).json({ error: 'Faltan datos obligatorios' });
     }
 
-    oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+    const prof = PROFESIONALES[req.body.profesional] || PROFESIONALES.julian;
+    oauth2Client.setCredentials({ refresh_token: prof.refreshToken() });
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
     // Construir fecha/hora en zona horaria de Salta
@@ -102,7 +127,8 @@ app.get('/api/cupos', async (req, res) => {
     const { fecha } = req.query;
     if (!fecha) return res.status(400).json({ error: 'Falta fecha' });
 
-    oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+    const prof = PROFESIONALES[req.body.profesional] || PROFESIONALES.julian;
+    oauth2Client.setCredentials({ refresh_token: prof.refreshToken() });
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
     const timeMin = `${fecha}T00:00:00-03:00`;
@@ -169,6 +195,16 @@ app.get('/api/cupos', async (req, res) => {
     console.error('Error obteniendo cupos:', err.message);
     res.status(500).json({ error: 'No se pudieron obtener los cupos' });
   }
+});
+
+// ─── RUTA: listar profesionales ──────────────────────────────────────────────
+app.get('/api/profesionales', (req, res) => {
+  const lista = Object.entries(PROFESIONALES).map(([id, p]) => ({
+    id,
+    nombre: p.nombre,
+    mp: p.mp
+  }));
+  res.json({ profesionales: lista });
 });
 
 const PORT = process.env.PORT || 3000;
