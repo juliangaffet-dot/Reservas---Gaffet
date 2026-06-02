@@ -357,6 +357,27 @@
       margin-bottom: 1rem;
     }
 
+    .carrito-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--green-50);
+      border: 0.5px solid var(--green-100);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--green-900);
+    }
+    .carrito-item-info { flex: 1; }
+    .carrito-item-dia { font-weight: 500; }
+    .carrito-item-hora { font-size: 12px; color: var(--green-700); }
+    .carrito-item-remove {
+      background: none; border: none; cursor: pointer;
+      font-size: 18px; color: var(--gray-500); padding: 0 4px;
+      line-height: 1;
+    }
+    .carrito-item-remove:hover { color: #A32D2D; }
+
     @media (max-width: 480px) {
       .hero { padding: 1.5rem 1.25rem 1.25rem; }
       .content { padding: 1.25rem; }
@@ -397,6 +418,15 @@
           <p class="slots-section-title">🌙 Tarde</p>
           <div class="slots-grid" id="slots-tarde"></div>
         </div>
+      </div>
+
+      <!-- CARRITO DE TURNOS -->
+      <div id="carrito-container" style="display:none; margin-top:1.5rem;">
+        <p class="section-label">Turnos seleccionados <span id="carrito-count" style="color:#1D9E75;"></span></p>
+        <div id="carrito-lista" style="display:flex; flex-direction:column; gap:8px; margin-bottom:1rem;"></div>
+        <button class="btn" style="background:none; border:0.5px dashed #9FE1CB; border-radius:12px; padding:10px; font-size:13px; color:#1D9E75; width:100%; cursor:pointer;" onclick="mostrarSlotsParaAgregar()" id="btn-agregar-mas">
+          + Agregar otro turno
+        </button>
       </div>
 
       <div style="margin-top:1.5rem;">
@@ -592,9 +622,10 @@
       const disp = cap - usado;
       const isPast = isSlotPast(dateStr, slot);
       const isFull = disp <= 0 || isPast;
-      const isSel = slot === selectedSlot;
+      const enCarrito = carrito.some(t => t.fecha === dateStr && t.slot === slot);
+      const isSel = enCarrito;
       const btn = document.createElement('button');
-      btn.className = 'slot-btn' + (isFull ? ' full' : '') + (isSel ? ' selected' : '');
+      btn.className = 'slot-btn' + (isFull && !enCarrito ? ' full' : '') + (isSel ? ' selected' : '');
       let tag = '';
       if (isPast) tag = `<span class="cupos-tag" style="color:var(--gray-500)">finalizado</span>`;
       else if (!isFull) tag = disp === 1
@@ -673,10 +704,12 @@
       tog.style.opacity = '1'; tog.style.pointerEvents = 'auto';
       sub.textContent = 'Opcional — reserva 2 cupos en el mismo horario';
     }
-    document.getElementById('resumen-preview').innerHTML =
-      `<div class="resumen-row"><strong>Día</strong> ${formatDateDisplay(selectedDate)}</div>` +
-      `<div class="resumen-row"><strong>Horario</strong> ${selectedSlot} hs</div>` +
-      `<div class="resumen-row"><strong>Ubicación</strong> <a class="maps-link" href="https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5" target="_blank" rel="noopener noreferrer">Cmte. Piedrabuena 820, Salta ↗</a></div>`;
+    let resumenHTML = '';
+    carrito.forEach(t => {
+      resumenHTML += '<div class="resumen-row"><strong>📅</strong> ' + t.fechaDisplay + ' — ' + t.slot + ' hs</div>';
+    });
+    resumenHTML += '<div class="resumen-row" style="margin-top:6px;"><strong>Ubicación</strong> <a class="maps-link" href="https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5" target="_blank" rel="noopener noreferrer">Cmte. Piedrabuena 820, Salta ↗</a></div>';
+    document.getElementById('resumen-preview').innerHTML = resumenHTML;
     document.getElementById('error-banner').style.display = 'none';
     document.getElementById('step1').classList.remove('active');
     document.getElementById('step2').classList.add('active');
@@ -724,23 +757,27 @@
     const acomp    = conAcomp ? document.getElementById('inp-acomp-nombre').value.trim() : null;
 
     try {
-      const res = await fetch(`${API_BASE}/api/reservar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, email, telefono, fecha: selectedDate, hora: selectedSlot, acompanante: acomp }),
-      });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'Error al reservar');
-
-      const cuposUsados = conAcomp ? 2 : 1;
-      reservasLocales[getKey(selectedDate, selectedSlot)] = (reservasLocales[getKey(selectedDate, selectedSlot)] || 0) + cuposUsados;
+      // Create all events in carrito
+      for (const turno of carrito) {
+        const res = await fetch(`${API_BASE}/api/reservar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, email, telefono, fecha: turno.fecha, hora: turno.slot, acompanante: acomp }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Error al reservar');
+        const cuposUsados = conAcomp ? 2 : 1;
+        reservasLocales[getKey(turno.fecha, turno.slot)] = (reservasLocales[getKey(turno.fecha, turno.slot)] || 0) + cuposUsados;
+      }
 
       document.getElementById('suc-nombre').textContent = nombre + (acomp ? ' + ' + acomp : '');
-      document.getElementById('suc-detail').innerHTML =
-        `<p>📅 ${formatDateDisplay(selectedDate)}</p>` +
-        `<p>🕐 ${selectedSlot} hs</p>` +
-        `<p>📍 <a class="maps-link" href="https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5" target="_blank" rel="noopener noreferrer" style="color:var(--green-700)">Cmte. Piedrabuena 820, Salta</a></p>` +
-        (acomp ? `<p>👥 Acompañante: ${acomp}</p>` : '');
+      let detailHTML = '';
+      carrito.forEach(t => {
+        detailHTML += '<p>📅 ' + t.fechaDisplay + ' — 🕐 ' + t.slot + ' hs</p>';
+      });
+      detailHTML += '<p>📍 <a class="maps-link" href="https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5" target="_blank" rel="noopener noreferrer" style="color:var(--green-700)">Cmte. Piedrabuena 820, Salta</a></p>';
+      if (acomp) detailHTML += '<p>👥 Acompañante: ' + acomp + '</p>';
+      document.getElementById('suc-detail').innerHTML = detailHTML;
 
       document.getElementById('step2').classList.remove('active');
       document.getElementById('step3').classList.add('active');
@@ -756,9 +793,10 @@
   }
 
   function resetApp() {
-    selectedDate = null; selectedSlot = null; selectedCap = null; conAcomp = false; cuposDelDia = {};
+    selectedDate = null; selectedSlot = null; selectedCap = null; conAcomp = false; cuposDelDia = {}; carrito = [];
     ['inp-nombre','inp-telefono','inp-email','inp-acomp-nombre','inp-acomp-tel'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('slots-container').style.display = 'none';
+    document.getElementById('carrito-container').style.display = 'none';
     document.getElementById('btn-continuar').disabled = true;
     document.getElementById('acomp-toggle').classList.remove('active');
     document.getElementById('acomp-form').classList.remove('visible');
