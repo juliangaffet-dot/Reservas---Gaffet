@@ -420,8 +420,22 @@
 
   <div class="content">
 
+    <!-- PASO 0: Elegir profesional -->
+    <div id="step0" class="step active">
+      <p class="section-label">Elegí tu profesional</p>
+      <div id="profesionales-grid" style="display:flex; flex-direction:column; gap:12px; margin-bottom:1.5rem;"></div>
+    </div>
+
     <!-- PASO 1: Elegir día y horario -->
-    <div id="step1" class="step active">
+    <div id="step1" class="step">
+      <button class="btn btn-ghost" onclick="volverAProfesionales()">← Volver</button>
+      <div id="prof-seleccionado-badge" style="display:flex; align-items:center; gap:10px; background:var(--green-50); border:0.5px solid var(--green-100); border-radius:12px; padding:10px 14px; margin-bottom:1.25rem;">
+        <div id="prof-badge-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--green-500);display:flex;align-items:center;justify-content:center;font-weight:500;color:white;font-size:13px;flex-shrink:0;"></div>
+        <div>
+          <div id="prof-badge-nombre" style="font-size:14px;font-weight:500;color:var(--green-900);"></div>
+          <div id="prof-badge-mp" style="font-size:12px;color:var(--green-700);"></div>
+        </div>
+      </div>
       <p class="section-label">Elegí el día</p>
       <div class="week-nav">
         <button onclick="changeWeek(-1)">&#8249;</button>
@@ -930,8 +944,9 @@
     document.getElementById('acomp-toggle').classList.remove('active');
     document.getElementById('acomp-form').classList.remove('visible');
     document.getElementById('step3').classList.remove('active');
-    document.getElementById('step1').classList.add('active');
-    renderWeek();
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('step0').classList.add('active');
+    cargarProfesionales();
   }
 
   cargarProfesionales();
