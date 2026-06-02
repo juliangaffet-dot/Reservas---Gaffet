@@ -570,14 +570,34 @@
     return local + remoto;
   }
 
-  function getSlotsManana() { return ['08:00']; }
+  function getSlotsManana(dateStr) {
+    const dow = new Date(dateStr + 'T12:00:00').getDay();
+    const profId = profesionalActual ? profesionalActual.id : 'julian';
+    const slots = [];
+    if (profId === 'mauro') {
+      if ([1,2,3,4].includes(dow)) {
+        for (let m = 9*60; m < 12*60; m += 30)
+          slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+      }
+    } else {
+      slots.push('08:00');
+    }
+    return slots;
+  }
 
   function getSlotsTarde(dateStr) {
     const dow = new Date(dateStr + 'T12:00:00').getDay();
-    const endMin = dow === 3 ? 19*60 : 21*60;
+    const profId = profesionalActual ? profesionalActual.id : 'julian';
     const slots = [];
-    for (let m = 16*60+30; m < endMin; m += 30)
-      slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+    if (profId === 'mauro') {
+      const endMin = dow === 5 ? 18*60 : 19*60;
+      for (let m = 15*60; m < endMin; m += 30)
+        slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+    } else {
+      const endMin = dow === 3 ? 19*60 : 21*60;
+      for (let m = 16*60+30; m < endMin; m += 30)
+        slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+    }
     return slots;
   }
 
