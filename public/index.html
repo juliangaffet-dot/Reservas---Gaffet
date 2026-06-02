@@ -521,6 +521,8 @@
   let selectedDate = null;
   let selectedSlot = null;
   let selectedCap = null;
+  let carrito = [];
+  const MAX_TURNOS = 5;
 
   function pad(n) { return String(n).padStart(2,'0'); }
   function getKey(d, s) { return d + '_' + s; }
