@@ -695,9 +695,17 @@
     document.getElementById('slots-container').style.display = 'block';
   }
 
+  function getCapacidad() {
+    const profId = profesionalActual ? profesionalActual.id : 'julian';
+    return profId === 'mauro' ? 2 : { manana: CAPACIDAD_MANANA, tarde: CAPACIDAD_TARDE };
+  }
+
   function renderSlots() {
-    renderSlotGroup('slots-manana', selectedDate, getSlotsManana(), CAPACIDAD_MANANA);
-    renderSlotGroup('slots-tarde', selectedDate, getSlotsTarde(selectedDate), CAPACIDAD_TARDE);
+    const profId = profesionalActual ? profesionalActual.id : 'julian';
+    const capManana = profId === 'mauro' ? 2 : CAPACIDAD_MANANA;
+    const capTarde  = profId === 'mauro' ? 2 : CAPACIDAD_TARDE;
+    renderSlotGroup('slots-manana', selectedDate, getSlotsManana(selectedDate), capManana);
+    renderSlotGroup('slots-tarde', selectedDate, getSlotsTarde(selectedDate), capTarde);
   }
 
   function isSlotPast(dateStr, slot) {
