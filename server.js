@@ -22,29 +22,17 @@ const PROFESIONALES = {
   julian: {
     nombre: 'Lic. Julián Gaffet',
     mp: '1321',
-    refreshToken: () => process.env.GOOGLE_REFRESH_TOKEN,
-    horarios: {
-      // lun=1, mar=2, mie=3, jue=4, vie=5
-      manana: { dias: [1,2,3,4,5], inicio: '08:00', fin: '09:00' },
-      tarde:  { dias: [1,2,3,4], inicio: '16:30', fin: '21:00', finMiercoles: '19:00' }
-    }
+    calendarId: 'primary'
   },
   mauro: {
     nombre: 'Lic. Mauro Ayub',
     mp: '1263',
-    refreshToken: () => process.env.GOOGLE_REFRESH_TOKEN_MAURO,
-    horarios: {
-      manana: { dias: [1,2,3,4], inicio: '09:00', fin: '12:00' },
-      tarde:  { dias: [1,2,3,4,5], inicio: '15:00', fin: '19:00', finViernes: '18:00' }
-    }
+    calendarId: 'mauroayub@gmail.com'
   },
   esteban: {
     nombre: 'Lic. Esteban Videla',
     mp: '1337',
-    refreshToken: () => process.env.GOOGLE_REFRESH_TOKEN_ESTEBAN,
-    horarios: {
-      tarde: { dias: [1,2,3,4,5], inicio: '15:00', fin: '20:00' }
-    }
+    calendarId: 'tebyvidela@gmail.com'
   }
 };
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,7 +68,7 @@ app.post('/api/reservar', async (req, res) => {
     }
 
     const prof = PROFESIONALES[req.body.profesional] || PROFESIONALES.julian;
-    oauth2Client.setCredentials({ refresh_token: prof.refreshToken() });
+    oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
     // Construir fecha/hora en zona horaria de Salta
@@ -117,7 +105,7 @@ app.post('/api/reservar', async (req, res) => {
     };
 
     const response = await calendar.events.insert({
-      calendarId: 'primary',
+      calendarId: prof.calendarId || 'primary',
       resource: event,
       sendNotifications: true,
     });
@@ -137,14 +125,14 @@ app.get('/api/cupos', async (req, res) => {
     if (!fecha) return res.status(400).json({ error: 'Falta fecha' });
 
     const prof = PROFESIONALES[req.body.profesional] || PROFESIONALES.julian;
-    oauth2Client.setCredentials({ refresh_token: prof.refreshToken() });
+    oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
     const timeMin = `${fecha}T00:00:00-03:00`;
     const timeMax = `${fecha}T23:59:59-03:00`;
 
     const response = await calendar.events.list({
-      calendarId: 'primary',
+      calendarId: prof.calendarId || 'primary',
       timeMin,
       timeMax,
       singleEvents: true,
