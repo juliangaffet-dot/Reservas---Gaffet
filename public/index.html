@@ -582,7 +582,7 @@
     const profId = profesionalActual ? profesionalActual.id : 'julian';
     const slots = [];
     if (profId === 'mauro') {
-      if ([1,2,3,4].includes(dow)) {
+      if ([1,2,3,4,5].includes(dow)) {
         for (let m = 9*60; m < 12*60; m += 30)
           slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
       }
