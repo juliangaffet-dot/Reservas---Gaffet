@@ -176,7 +176,10 @@ app.get('/api/cupos', async (req, res) => {
           cupos[minutesToTime(m)] = 999;
         }
       } else {
-        cupos[horaInicio] = (cupos[horaInicio] || 0) + 1;
+        // ✅ FIX: si el título tiene " + " es porque tiene acompañante → cuenta 2 cupos
+        const tieneAcompanante = (ev.summary || '').includes(' + ');
+        const cuposUsados = tieneAcompanante ? 2 : 1;
+        cupos[horaInicio] = (cupos[horaInicio] || 0) + cuposUsados;
       }
     });
 
