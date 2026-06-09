@@ -13,8 +13,6 @@ const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.REDIRECT_URI || 'http://localhost:3000/auth/callback';
 const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
-const REFRESH_TOKEN_MAURO = process.env.GOOGLE_REFRESH_TOKEN_MAURO;
-const REFRESH_TOKEN_ESTEBAN = process.env.GOOGLE_REFRESH_TOKEN_ESTEBAN;
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── PROFESIONALES ────────────────────────────────────────────────────────────
@@ -101,7 +99,7 @@ app.post('/api/reservar', async (req, res) => {
           { method: 'popup',  minutes: 30 },
         ],
       },
-      sendUpdates: 'all', // envía invitación por email al paciente
+      sendUpdates: 'all',
     };
 
     const response = await calendar.events.insert({
@@ -124,7 +122,9 @@ app.get('/api/cupos', async (req, res) => {
     const { fecha } = req.query;
     if (!fecha) return res.status(400).json({ error: 'Falta fecha' });
 
-    const prof = PROFESIONALES[req.body.profesional] || PROFESIONALES.julian;
+    // ✅ FIX: leer el profesional desde req.query (no req.body, que no existe en GET)
+    const prof = PROFESIONALES[req.query.profesional] || PROFESIONALES.julian;
+
     oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
@@ -132,7 +132,7 @@ app.get('/api/cupos', async (req, res) => {
     const timeMax = `${fecha}T23:59:59-03:00`;
 
     const response = await calendar.events.list({
-      calendarId: prof.calendarId || 'primary',
+      calendarId: prof.calendarId,
       timeMin,
       timeMax,
       singleEvents: true,
@@ -141,11 +141,10 @@ app.get('/api/cupos', async (req, res) => {
 
     const eventos = response.data.items || [];
     const cupos = {};
-    const bloqueados = {}; // horarios completamente bloqueados
+    const bloqueados = {};
 
     const PALABRAS_BLOQUEO = ['bloqueado', 'no disponible', 'feriado', 'cerrado', 'ocupado', 'no atiende'];
 
-    // Generar todos los slots posibles del día (cada 30 min de 06:00 a 23:30)
     function timeToMinutes(hhmm) {
       const [h, m] = hhmm.split(':').map(Number);
       return h * 60 + m;
@@ -166,7 +165,7 @@ app.get('/api/cupos', async (req, res) => {
 
       if (!ev.start?.dateTime) return;
 
-      const horaInicio = ev.start.dateTime.substring(11, 16); // "HH:MM"
+      const horaInicio = ev.start.dateTime.substring(11, 16);
       const horaFin = ev.end?.dateTime ? ev.end.dateTime.substring(11, 16) : horaInicio;
 
       if (esBloqueo) {
@@ -181,7 +180,6 @@ app.get('/api/cupos', async (req, res) => {
       }
     });
 
-    // Si el día completo está bloqueado, devolver señal especial
     if (bloqueados['DIA_COMPLETO']) {
       return res.json({ cupos: {}, diaBloqueado: true });
     }
