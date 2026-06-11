@@ -589,8 +589,12 @@
     } else if (profId === 'esteban') {
       // Esteban: sin turno mañana
     } else {
-      // Julian: lun-vie 08:00
-      slots.push('08:00');
+      // Julian: mie-jue-vie mañana 08:00 y 08:30 (3 cupos)
+      // lun-mar: sin turno mañana
+      if ([3,4,5].includes(dow)) {
+        slots.push('08:00');
+        slots.push('08:30');
+      }
     }
     return slots;
   }
@@ -608,7 +612,8 @@
       for (let m = 15*60; m < 20*60; m += 30)
         slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
     } else {
-      const endMin = dow === 3 ? 19*60 : 21*60;
+      // Julian: mie hasta 19:00, lun/mar/jue/vie hasta 20:00
+      const endMin = dow === 3 ? 19*60 : 20*60;
       for (let m = 16*60+30; m < endMin; m += 30)
         slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
     }
@@ -739,7 +744,7 @@
 
   function renderSlots() {
     const profId = profesionalActual ? profesionalActual.id : 'julian';
-    const capManana = (profId === 'mauro' || profId === 'esteban') ? 2 : CAPACIDAD_MANANA;
+    const capManana = (profId === 'mauro' || profId === 'esteban') ? 2 : (profId === 'julian' ? 3 : CAPACIDAD_MANANA);
     const capTarde  = (profId === 'mauro' || profId === 'esteban') ? 2 : CAPACIDAD_TARDE;
     renderSlotGroup('slots-manana', selectedDate, getSlotsManana(selectedDate), capManana);
     renderSlotGroup('slots-tarde', selectedDate, getSlotsTarde(selectedDate), capTarde);
