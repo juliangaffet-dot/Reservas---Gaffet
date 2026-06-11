@@ -612,8 +612,8 @@
       for (let m = 15*60; m < 20*60; m += 30)
         slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
     } else {
-      // Julian: mie hasta 19:00, lun/mar/jue/vie hasta 20:00
-      const endMin = dow === 3 ? 19*60 : 20*60;
+      // Julian: mie hasta 19:00, lun/mar/jue/vie hasta 20:30 (para incluir el slot de 20:00)
+      const endMin = dow === 3 ? 19*60 : 20*60+30;
       for (let m = 16*60+30; m < endMin; m += 30)
         slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
     }
