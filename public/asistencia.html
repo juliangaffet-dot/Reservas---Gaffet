@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kine House — Asistencia</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green-50: #E1F5EE;
+      --green-100: #9FE1CB;
+      --green-500: #1D9E75;
+      --green-700: #0F6E56;
+      --green-900: #04342C;
+      --gray-50: #F8F7F4;
+      --gray-100: #EFEFEB;
+      --gray-300: #D3D1C7;
+      --gray-500: #888780;
+      --gray-700: #444441;
+      --gray-900: #1A1A18;
+      --amber-50: #FAEEDA;
+      --amber-800: #633806;
+      --red-50: #FCEBEB;
+      --red-500: #E53E3E;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--gray-50); color: var(--gray-900); min-height: 100vh; }
+    .page-wrapper { max-width: 600px; margin: 0 auto; min-height: 100vh; background: white; box-shadow: 0 0 60px rgba(0,0,0,0.06); }
+
+    /* LOGIN */
+    .login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
+    .login-box { width: 100%; max-width: 340px; }
+    .login-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--green-900); margin-bottom: 4px; }
+    .login-sub { font-size: 13px; color: var(--gray-500); margin-bottom: 1.5rem; }
+    .login-input { width: 100%; border: 0.5px solid var(--gray-300); border-radius: 8px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 15px; margin-bottom: 12px; }
+    .login-input:focus { outline: none; border-color: var(--green-500); }
+    .login-btn { width: 100%; padding: 12px; background: var(--green-500); color: white; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; }
+    .login-btn:hover { background: var(--green-700); }
+    .login-error { color: var(--red-500); font-size: 13px; margin-top: 8px; display: none; }
+
+    /* HEADER */
+    .header { background: #2D4A3E; padding: 1.25rem 1.5rem; }
+    .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .header-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: white; }
+    .logout-btn { background: rgba(255,255,255,0.1); border: 0.5px solid rgba(255,255,255,0.2); color: var(--green-100); font-size: 12px; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+    /* CONTROLES */
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ctrl-input { flex: 1; min-width: 120px; border: 0.5px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 8px 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: rgba(255,255,255,0.1); color: white; }
+    .ctrl-input option { background: #2D4A3E; }
+    .ctrl-input::placeholder { color: rgba(255,255,255,0.5); }
+    .ctrl-input:focus { outline: none; border-color: var(--green-100); }
+    .ctrl-btn { padding: 8px 14px; background: var(--green-500); color: white; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .ctrl-btn:hover { background: var(--green-700); }
+
+    /* CONTENIDO */
+    .content { padding: 1.25rem; }
+
+    /* STATS */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+    .stat-box { background: var(--gray-50); border: 0.5px solid var(--gray-300); border-radius: 10px; padding: 10px; text-align: center; }
+    .stat-num { font-size: 24px; font-weight: 500; color: var(--green-700); }
+    .stat-label { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+    .stat-box.asistio .stat-num { color: var(--green-700); }
+    .stat-box.ausente .stat-num { color: var(--red-500); }
+    .stat-box.pendiente .stat-num { color: var(--amber-800); }
+
+    /* LISTA */
+    .lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
+    .turno-card { border: 0.5px solid var(--gray-300); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; transition: border-color 0.15s; }
+    .turno-card.asistio { border-color: var(--green-100); background: var(--green-50); }
+    .turno-card.ausente { border-color: #F09595; background: var(--red-50); }
+    .turno-card.pendiente { border-color: var(--gray-300); }
+    .turno-hora { font-size: 15px; font-weight: 500; min-width: 44px; color: var(--gray-700); }
+    .turno-info { flex: 1; }
+    .turno-nombre { font-size: 14px; font-weight: 500; color: var(--gray-900); }
+    .turno-prof { font-size: 11px; color: var(--gray-500); margin-top: 1px; }
+    .turno-manual { font-size: 10px; color: var(--green-700); background: var(--green-50); border: 0.5px solid var(--green-100); border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
+    .estado-badge { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 99px; white-space: nowrap; }
+    .estado-badge.asistio { background: var(--green-100); color: var(--green-900); }
+    .estado-badge.ausente { background: #F09595; color: #7A1111; }
+    .estado-badge.pendiente { background: var(--amber-50); color: var(--amber-800); }
+    .turno-actions { display: flex; gap: 4px; }
+    .action-btn { border: none; border-radius: 6px; padding: 5px 8px; font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 500; transition: opacity 0.15s; }
+    .action-btn:hover { opacity: 0.8; }
+    .btn-asistio { background: var(--green-500); color: white; }
+    .btn-ausente { background: var(--red-500); color: white; }
+    .btn-pendiente { background: var(--gray-300); color: var(--gray-700); }
+
+    /* AGREGAR MANUAL */
+    .manual-section { border: 0.5px dashed var(--green-100); border-radius: 10px; padding: 14px; margin-bottom: 1rem; }
+    .manual-title { font-size: 12px; font-weight: 500; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+    .manual-form { display: flex; flex-direction: column; gap: 8px; }
+    .manual-row { display: flex; gap: 8px; }
+    .manual-input { flex: 1; border: 0.5px solid var(--gray-300); border-radius: 7px; padding: 8px 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; }
+    .manual-input:focus { outline: none; border-color: var(--green-500); }
+    .manual-btn { padding: 8px 14px; background: var(--green-500); color: white; border: none; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .manual-btn:hover { background: var(--green-700); }
+
+    /* CERRAR DÍA */
+    .cerrar-btn { width: 100%; padding: 12px; background: #2D4A3E; color: white; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 1rem; }
+    .cerrar-btn:hover { background: var(--green-900); }
+
+    .empty { text-align: center; padding: 2rem; color: var(--gray-500); font-size: 14px; }
+    .loading { text-align: center; padding: 2rem; color: var(--gray-500); font-size: 14px; }
+    .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--green-900); color: white; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-box">
+    <div class="login-title">Kine House</div>
+    <div class="login-sub">Panel de asistencia — ingresá la contraseña</div>
+    <input type="password" id="inp-pass" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter') login()">
+    <button class="login-btn" onclick="login()">Ingresar</button>
+    <div class="login-error" id="login-error">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- PANEL PRINCIPAL -->
+<div id="panel" class="page-wrapper" style="display:none;">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-title">Asistencia</div>
+      <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+    <div class="controls">
+      <input type="date" id="ctrl-fecha" class="ctrl-input" onchange="cargar()">
+      <select id="ctrl-prof" class="ctrl-input" onchange="cargar()">
+        <option value="todos">Todos</option>
+        <option value="julian">Julián</option>
+        <option value="mauro">Mauro</option>
+        <option value="esteban">Esteban</option>
+      </select>
+      <button class="ctrl-btn" onclick="cargar()">Actualizar</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="stats" id="stats" style="display:none;">
+      <div class="stat-box asistio"><div class="stat-num" id="stat-asistio">0</div><div class="stat-label">Asistieron</div></div>
+      <div class="stat-box ausente"><div class="stat-num" id="stat-ausente">0</div><div class="stat-label">Ausentes</div></div>
+      <div class="stat-box pendiente"><div class="stat-num" id="stat-pendiente">0</div><div class="stat-label">Pendientes</div></div>
+    </div>
+
+    <div class="lista" id="lista"></div>
+
+    <div class="manual-section">
+      <div class="manual-title">+ Agregar paciente sin turno</div>
+      <div class="manual-form">
+        <div class="manual-row">
+          <input type="text" id="man-nombre" class="manual-input" placeholder="Nombre del paciente">
+          <input type="time" id="man-hora" class="manual-input" value="09:00">
+        </div>
+        <div class="manual-row">
+          <select id="man-prof" class="manual-input">
+            <option value="julian">Julián</option>
+            <option value="mauro">Mauro</option>
+            <option value="esteban">Esteban</option>
+          </select>
+          <button class="manual-btn" onclick="agregarManual()">Agregar</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="cerrar-btn" onclick="cerrarDia()">✅ Marcar todos los pendientes como asistió</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let password = '';
+
+  function login() {
+    const pass = document.getElementById('inp-pass').value;
+    if (!pass) return;
+    password = pass;
+    // Verificar con el servidor
+    fetch('/api/asistencia?fecha=' + hoy(), {
+      headers: { 'x-panel-password': pass }
+    }).then(r => {
+      if (r.status === 401) {
+        document.getElementById('login-error').style.display = 'block';
+        password = '';
+      } else {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+        document.getElementById('ctrl-fecha').value = hoy();
+        cargar();
+      }
+    }).catch(() => {
+      document.getElementById('login-error').style.display = 'block';
+    });
+  }
+
+  function logout() {
+    password = '';
+    document.getElementById('panel').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('inp-pass').value = '';
+    document.getElementById('login-error').style.display = 'none';
+  }
+
+  function hoy() {
+    const now = new Date();
+    // Ajuste a Argentina UTC-3
+    const arg = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    return arg.toISOString().substring(0, 10);
+  }
+
+  async function cargar() {
+    const fecha = document.getElementById('ctrl-fecha').value;
+    const prof = document.getElementById('ctrl-prof').value;
+    if (!fecha) return;
+
+    document.getElementById('lista').innerHTML = '<div class="loading">Cargando...</div>';
+    document.getElementById('stats').style.display = 'none';
+
+    let url = `/api/asistencia?fecha=${fecha}`;
+    if (prof !== 'todos') url += `&profesional=${prof}`;
+
+    const r = await fetch(url, { headers: { 'x-panel-password': password } });
+    const data = await r.json();
+    const turnos = data.turnos || [];
+
+    const stats = { asistio: 0, ausente: 0, pendiente: 0 };
+    turnos.forEach(t => { if (stats[t.estado] !== undefined) stats[t.estado]++; });
+
+    document.getElementById('stat-asistio').textContent = stats.asistio;
+    document.getElementById('stat-ausente').textContent = stats.ausente;
+    document.getElementById('stat-pendiente').textContent = stats.pendiente;
+    document.getElementById('stats').style.display = turnos.length ? 'grid' : 'none';
+
+    const lista = document.getElementById('lista');
+    if (!turnos.length) {
+      lista.innerHTML = '<div class="empty">No hay turnos para este día</div>';
+      return;
+    }
+
+    const PROF_NOMBRES = { julian: 'Julián Gaffet', mauro: 'Mauro Ayub', esteban: 'Esteban Videla' };
+    const ESTADOS = { asistio: 'Asistió', ausente: 'Ausente', pendiente: 'Pendiente' };
+
+    lista.innerHTML = turnos.map(t => `
+      <div class="turno-card ${t.estado}" id="card-${t.id}">
+        <div class="turno-hora">${t.hora}</div>
+        <div class="turno-info">
+          <div class="turno-nombre">
+            ${t.nombre}
+            ${(!t.email && !t.telefono) ? '<span class="turno-manual">sin turno</span>' : ''}
+          </div>
+          <div class="turno-prof">${PROF_NOMBRES[t.profesional] || t.profesional}</div>
+        </div>
+        <span class="estado-badge ${t.estado}">${ESTADOS[t.estado]}</span>
+        <div class="turno-actions">
+          ${t.estado !== 'asistio' ? `<button class="action-btn btn-asistio" onclick="cambiarEstado(${t.id},'asistio')">✓</button>` : ''}
+          ${t.estado !== 'ausente' ? `<button class="action-btn btn-ausente" onclick="cambiarEstado(${t.id},'ausente')">✗</button>` : ''}
+          ${t.estado !== 'pendiente' ? `<button class="action-btn btn-pendiente" onclick="cambiarEstado(${t.id},'pendiente')">↺</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function cambiarEstado(id, estado) {
+    await fetch(`/api/asistencia/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
+      body: JSON.stringify({ estado })
+    });
+    cargar();
+    showToast(estado === 'asistio' ? '✅ Marcado como asistió' : estado === 'ausente' ? '❌ Marcado como ausente' : '↺ Vuelto a pendiente');
+  }
+
+  async function agregarManual() {
+    const nombre = document.getElementById('man-nombre').value.trim();
+    const hora = document.getElementById('man-hora').value;
+    const profesional = document.getElementById('man-prof').value;
+    const fecha = document.getElementById('ctrl-fecha').value;
+
+    if (!nombre || !hora || !fecha) { showToast('⚠️ Completá nombre y hora'); return; }
+
+    await fetch('/api/asistencia/manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
+      body: JSON.stringify({ nombre, profesional, fecha, hora })
+    });
+
+    document.getElementById('man-nombre').value = '';
+    cargar();
+    showToast('✅ Paciente agregado');
+  }
+
+  async function cerrarDia() {
+    const fecha = document.getElementById('ctrl-fecha').value;
+    if (!confirm(`¿Marcar todos los turnos pendientes del ${fecha} como asistió?`)) return;
+
+    const r = await fetch('/api/asistencia/cerrar-dia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
+      body: JSON.stringify({ fecha })
+    });
+    const data = await r.json();
+    cargar();
+    showToast(`✅ ${data.actualizados} turno(s) marcados`);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
