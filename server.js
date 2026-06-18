@@ -35,10 +35,18 @@ db.exec(`
     sesiones_total INTEGER NOT NULL DEFAULT 10,
     sesiones_usadas INTEGER NOT NULL DEFAULT 0,
     profesional TEXT NOT NULL DEFAULT 'julian',
+    email TEXT,
+    telefono TEXT,
+    sin_completar INTEGER NOT NULL DEFAULT 1,
     activo INTEGER NOT NULL DEFAULT 1,
     creado_en TEXT DEFAULT (datetime('now','-3 hours'))
   );
 `);
+
+// Migración suave: agregar columnas si la DB ya existía sin ellas
+try { db.exec(`ALTER TABLE pacientes ADD COLUMN email TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE pacientes ADD COLUMN telefono TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE pacientes ADD COLUMN sin_completar INTEGER NOT NULL DEFAULT 1`); } catch(e) {}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
@@ -55,6 +63,29 @@ const PROFESIONALES = {
 };
 
 const PALABRAS_BLOQUEO = ['bloqueado', 'no disponible', 'feriado', 'cerrado', 'ocupado', 'no atiende'];
+
+// ─── AUTO-REGISTRO DE PACIENTES ──────────────────────────────────────────────
+// Si el paciente no existe (por nombre+profesional), lo crea con valores por defecto.
+// Julián completa después obra social y sesiones reales desde el panel.
+function obtenerOCrearPaciente(nombre, profesional, email, telefono) {
+  const existente = db.prepare(`
+    SELECT id FROM pacientes WHERE LOWER(nombre) = LOWER(?) AND profesional = ? AND activo = 1 LIMIT 1
+  `).get(nombre, profesional);
+  if (existente) {
+    // Si ya existe pero no tenía email/telefono, completarlos
+    if (email || telefono) {
+      db.prepare(`UPDATE pacientes SET email = COALESCE(NULLIF(email,''), ?), telefono = COALESCE(NULLIF(telefono,''), ?) WHERE id = ?`).run(email || '', telefono || '', existente.id);
+    }
+    return existente.id;
+  }
+
+  const result = db.prepare(`
+    INSERT INTO pacientes (nombre, obra_social, plan, sesiones_total, sesiones_usadas, profesional, email, telefono, sin_completar)
+    VALUES (?, '', '', 10, 0, ?, ?, ?, 1)
+  `).run(nombre, profesional, email || '', telefono || '');
+  return result.lastInsertRowid;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 // ─────────────────────────────────────────────────────────────────────────────
@@ -134,12 +165,12 @@ app.post('/api/reservar', async (req, res) => {
       sendNotifications: true,
     });
 
-    const paciente = db.prepare(`SELECT id FROM pacientes WHERE LOWER(nombre) = LOWER(?) AND profesional = ? AND activo = 1 LIMIT 1`).get(nombre, profId);
-    db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?)`).run(nombre, email||'', telefono||'', acompanante||'', profId, fecha, hora, paciente?.id || null);
+    const pacienteId = obtenerOCrearPaciente(nombre, profId, email, telefono);
+    db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?)`).run(nombre, email||'', telefono||'', acompanante||'', profId, fecha, hora, pacienteId);
 
     if (acompanante) {
-      const pacAcomp = db.prepare(`SELECT id FROM pacientes WHERE LOWER(nombre) = LOWER(?) AND profesional = ? AND activo = 1 LIMIT 1`).get(acompanante, profId);
-      db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id) VALUES (?, '', '', '', ?, ?, ?, 'pendiente', ?)`).run(acompanante, profId, fecha, hora, pacAcomp?.id || null);
+      const pacAcompId = obtenerOCrearPaciente(acompanante, profId, '', '');
+      db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id) VALUES (?, '', '', '', ?, ?, ?, 'pendiente', ?)`).run(acompanante, profId, fecha, hora, pacAcompId);
     }
 
     res.json({ ok: true, eventId: response.data.id });
@@ -273,11 +304,11 @@ app.post('/api/sincronizar', authPanel, async (req, res) => {
           `).get(fecha, profId, ev.hora, nombre);
 
           if (!yaExiste) {
-            const paciente = db.prepare(`SELECT id FROM pacientes WHERE LOWER(nombre) = LOWER(?) AND profesional = ? AND activo = 1 LIMIT 1`).get(nombre, profId);
+            const pacienteId = obtenerOCrearPaciente(nombre, profId, '', '');
             db.prepare(`
               INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id)
               VALUES (?, '', '', '', ?, ?, ?, 'pendiente', ?)
-            `).run(nombre, profId, fecha, ev.hora, paciente?.id || null);
+            `).run(nombre, profId, fecha, ev.hora, pacienteId);
             agregados++;
           }
         }
@@ -312,10 +343,11 @@ app.patch('/api/pacientes/:id', authPanel, (req, res) => {
   const p = db.prepare('SELECT * FROM pacientes WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'No encontrado' });
   const { nombre, obra_social, plan, sesiones_total, sesiones_usadas, profesional, activo } = req.body;
-  db.prepare(`UPDATE pacientes SET nombre=?, obra_social=?, plan=?, sesiones_total=?, sesiones_usadas=?, profesional=?, activo=? WHERE id=?`).run(
+  const sinCompletar = (obra_social !== undefined && obra_social !== '') ? 0 : p.sin_completar;
+  db.prepare(`UPDATE pacientes SET nombre=?, obra_social=?, plan=?, sesiones_total=?, sesiones_usadas=?, profesional=?, activo=?, sin_completar=? WHERE id=?`).run(
     nombre??p.nombre, obra_social??p.obra_social, plan??p.plan,
     sesiones_total??p.sesiones_total, sesiones_usadas??p.sesiones_usadas,
-    profesional??p.profesional, activo??p.activo, req.params.id
+    profesional??p.profesional, activo??p.activo, sinCompletar, req.params.id
   );
   res.json({ ok: true });
 });
@@ -356,10 +388,10 @@ app.patch('/api/asistencia/:id', authPanel, (req, res) => {
 app.post('/api/asistencia/manual', authPanel, (req, res) => {
   const { nombre, profesional, fecha, hora } = req.body;
   if (!nombre || !profesional || !fecha || !hora) return res.status(400).json({ error: 'Faltan datos' });
-  const paciente = db.prepare(`SELECT id FROM pacientes WHERE LOWER(nombre) = LOWER(?) AND profesional = ? AND activo = 1 LIMIT 1`).get(nombre, profesional);
   db.transaction(() => {
-    db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id) VALUES (?, '', '', '', ?, ?, ?, 'asistio', ?)`).run(nombre, profesional, fecha, hora, paciente?.id || null);
-    if (paciente) db.prepare('UPDATE pacientes SET sesiones_usadas = sesiones_usadas + 1 WHERE id = ? AND sesiones_usadas < sesiones_total').run(paciente.id);
+    const pacienteId = obtenerOCrearPaciente(nombre, profesional, '', '');
+    db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id) VALUES (?, '', '', '', ?, ?, ?, 'asistio', ?)`).run(nombre, profesional, fecha, hora, pacienteId);
+    db.prepare('UPDATE pacientes SET sesiones_usadas = sesiones_usadas + 1 WHERE id = ? AND sesiones_usadas < sesiones_total').run(pacienteId);
   })();
   res.json({ ok: true });
 });
