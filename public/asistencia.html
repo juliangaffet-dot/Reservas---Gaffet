@@ -124,6 +124,8 @@
     .sync-banner { background:var(--green-50); border:0.5px solid var(--green-100); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--green-700); margin-bottom:1rem; display:none; }
     .empty { text-align:center; padding:2rem; color:var(--gray-500); font-size:14px; }
     .prof-tag { font-size:10px; background:var(--gray-100); color:var(--gray-500); border-radius:4px; padding:1px 5px; }
+    .badge-completar { font-size:10px; font-weight:500; background:var(--amber-50); color:var(--amber-800); border:0.5px solid #f0c87a; border-radius:4px; padding:1px 6px; margin-left:4px; }
+    .pac-card-pendiente { border-color:#f0c87a; background:#fffaf0; }
     .toast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%); background:var(--green-900); color:white; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:500; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:100; white-space:nowrap; }
     .toast.show { opacity:1; }
   </style>
@@ -450,19 +452,26 @@
     _todosLosPacientes = data.pacientes || [];
     const lista = document.getElementById('lista-pacientes');
     if (!_todosLosPacientes.length) { lista.innerHTML = '<div class="empty">No hay pacientes cargados</div>'; return; }
+
+    const pendientesCompletar = _todosLosPacientes.filter(p => p.sin_completar === 1 || !p.obra_social).length;
+    const avisoHTML = pendientesCompletar > 0
+      ? `<div class="sync-banner" style="display:block; background:var(--amber-50); border-color:#f0c87a; color:var(--amber-800);">⚠️ ${pendientesCompletar} paciente${pendientesCompletar !== 1 ? 's' : ''} se registraron solos al reservar y falta completarles obra social y sesiones.</div>`
+      : '';
+
     const PROF = { julian:'Julián', mauro:'Mauro', esteban:'Esteban' };
     lista.innerHTML = _todosLosPacientes.map(p => {
       const rest = p.sesiones_total - p.sesiones_usadas;
       const pct = Math.min(100, Math.round((p.sesiones_usadas / p.sesiones_total) * 100));
       const cl = rest <= 0 ? 'agotado' : rest <= 2 ? 'pocas' : 'ok';
       const ini = p.nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const sinCompletar = p.sin_completar === 1 || !p.obra_social;
       return `
-        <div class="pac-card">
+        <div class="pac-card${sinCompletar ? ' pac-card-pendiente' : ''}">
           <div class="pac-top">
             <div class="pac-avatar">${ini}</div>
             <div class="pac-info">
-              <div class="pac-nombre">${p.nombre}</div>
-              <div class="pac-sub">${p.obra_social||''}${p.plan?' · '+p.plan:''} <span class="prof-tag">${PROF[p.profesional]||p.profesional}</span></div>
+              <div class="pac-nombre">${p.nombre} ${sinCompletar ? '<span class="badge-completar">completar datos</span>' : ''}</div>
+              <div class="pac-sub">${p.obra_social||(sinCompletar ? 'Auto-registrado al reservar' : '')}${p.plan?' · '+p.plan:''} <span class="prof-tag">${PROF[p.profesional]||p.profesional}</span></div>
             </div>
             <div class="pac-sesiones">
               <div class="pac-num ${cl}">${rest}</div>
@@ -478,6 +487,7 @@
           </div>
         </div>`;
     }).join('');
+    lista.innerHTML = avisoHTML + lista.innerHTML;
   }
 
   async function crearPaciente() {
