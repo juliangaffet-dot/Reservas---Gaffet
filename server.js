@@ -362,6 +362,24 @@ app.delete('/api/pacientes/:id', authPanel, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── PACIENTES CON TURNOS EN UN RANGO (para carga semanal) ──────────────────
+app.get('/api/pacientes/recientes', authPanel, (req, res) => {
+  const { desde, hasta, profesional } = req.query;
+  if (!desde || !hasta) return res.status(400).json({ error: 'Faltan fechas' });
+
+  let query = `
+    SELECT p.*, MAX(t.fecha) as ultima_fecha, COUNT(t.id) as turnos_en_rango
+    FROM pacientes p
+    INNER JOIN turnos t ON t.paciente_id = p.id
+    WHERE p.activo = 1 AND t.fecha >= ? AND t.fecha <= ?
+  `;
+  const params = [desde, hasta];
+  if (profesional && profesional !== 'todos') { query += ' AND p.profesional = ?'; params.push(profesional); }
+  query += ' GROUP BY p.id ORDER BY (p.sin_completar = 1 OR p.obra_social = "") DESC, ultima_fecha DESC';
+
+  res.json({ pacientes: db.prepare(query).all(...params) });
+});
+
 // ─── API ASISTENCIA ───────────────────────────────────────────────────────────
 app.get('/api/asistencia', authPanel, (req, res) => {
   const { fecha, profesional } = req.query;
