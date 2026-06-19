@@ -122,6 +122,11 @@
     .modal-btn-cancel { flex:1; padding:10px; background:var(--gray-100); color:var(--gray-700); border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; }
 
     .sync-banner { background:var(--green-50); border:0.5px solid var(--green-100); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--green-700); margin-bottom:1rem; display:none; }
+    .subtab-row { display:flex; gap:6px; margin-bottom:1.25rem; border-bottom:0.5px solid var(--gray-300); padding-bottom:1rem; flex-wrap:wrap; }
+    .subtab-btn { background:var(--gray-100); border:none; color:var(--gray-700); font-size:12px; padding:7px 14px; border-radius:99px; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:500; }
+    .subtab-btn.active { background:var(--green-500); color:white; }
+    .subtab-content { display:none; }
+    .subtab-content.active { display:block; }
     .empty { text-align:center; padding:2rem; color:var(--gray-500); font-size:14px; }
     .prof-tag { font-size:10px; background:var(--gray-100); color:var(--gray-500); border-radius:4px; padding:1px 5px; }
     .badge-completar { font-size:10px; font-weight:500; background:var(--amber-50); color:var(--amber-800); border:0.5px solid #f0c87a; border-radius:4px; padding:1px 6px; margin-left:4px; }
@@ -164,13 +169,13 @@
       <button class="ctrl-btn sync" id="btn-sync" onclick="sincronizar()" title="Sincronizar con Google Calendar">📅 Sincronizar</button>
     </div>
     <div class="controls" id="ctrl-pacientes" style="display:none;">
-      <select id="ctrl-prof-pac" class="ctrl-input" onchange="cargarPacientes()">
+      <select id="ctrl-prof-pac" class="ctrl-input" onchange="cargarVistaPacientes()">
         <option value="todos">Todos</option>
         <option value="julian">Julián</option>
         <option value="mauro">Mauro</option>
         <option value="esteban">Esteban</option>
       </select>
-      <button class="ctrl-btn" onclick="cargarPacientes()">↺</button>
+      <button class="ctrl-btn" onclick="cargarVistaPacientes()">↺</button>
     </div>
   </div>
 
@@ -207,6 +212,21 @@
 
     <!-- PACIENTES -->
     <div id="tab-pacientes" class="tab-content">
+      <div class="subtab-row">
+        <button class="subtab-btn active" id="subtab-todos-btn" onclick="switchSubtab('todos')">Todos</button>
+        <button class="subtab-btn" id="subtab-recientes-btn" onclick="switchSubtab('recientes')">Sacaron turno esta semana</button>
+      </div>
+
+      <div id="subtab-recientes" class="subtab-content">
+        <div class="form-row" style="margin-bottom:1rem;">
+          <input type="date" id="rec-desde" class="form-input">
+          <input type="date" id="rec-hasta" class="form-input">
+          <button class="form-btn" onclick="cargarRecientes()">Buscar</button>
+        </div>
+        <div id="lista-recientes"></div>
+      </div>
+
+      <div id="subtab-todos" class="subtab-content active">
       <div class="form-section" style="margin-bottom:1.25rem;">
         <div class="form-title">Nuevo paciente</div>
         <div class="form-row">
@@ -232,6 +252,7 @@
         </div>
       </div>
       <div id="lista-pacientes"></div>
+      </div>
     </div>
 
   </div>
@@ -329,7 +350,87 @@
     });
     document.getElementById('ctrl-asistencia').style.display = tab === 'asistencia' ? 'flex' : 'none';
     document.getElementById('ctrl-pacientes').style.display = tab === 'pacientes' ? 'flex' : 'none';
-    if (tab === 'pacientes') cargarPacientes();
+    if (tab === 'pacientes') cargarVistaPacientes();
+  }
+
+  function switchSubtab(sub) {
+    ['todos','recientes'].forEach(s => {
+      document.getElementById('subtab-' + s).classList.toggle('active', s === sub);
+      document.getElementById('subtab-' + s + '-btn').classList.toggle('active', s === sub);
+    });
+    if (sub === 'recientes') {
+      if (!document.getElementById('rec-desde').value) {
+        // Default: últimos 7 días
+        const hastaD = new Date(new Date().getTime() - 3*60*60*1000);
+        const desdeD = new Date(hastaD.getTime() - 6*24*60*60*1000);
+        document.getElementById('rec-hasta').value = hastaD.toISOString().substring(0,10);
+        document.getElementById('rec-desde').value = desdeD.toISOString().substring(0,10);
+      }
+      cargarRecientes();
+    }
+  }
+
+  function cargarVistaPacientes() {
+    cargarPacientes();
+  }
+
+  async function cargarRecientes() {
+    const desde = document.getElementById('rec-desde').value;
+    const hasta = document.getElementById('rec-hasta').value;
+    const prof = document.getElementById('ctrl-prof-pac').value;
+    if (!desde || !hasta) return;
+    const lista = document.getElementById('lista-recientes');
+    lista.innerHTML = '<div class="empty">Cargando...</div>';
+    let url = `/api/pacientes/recientes?desde=${desde}&hasta=${hasta}`;
+    if (prof !== 'todos') url += `&profesional=${prof}`;
+    const r = await fetch(url, { headers: { 'x-panel-password': password } });
+    const data = await r.json();
+    const pacientes = data.pacientes || [];
+    if (!pacientes.length) { lista.innerHTML = '<div class="empty">Nadie sacó turno en ese rango</div>'; return; }
+
+    _pacientesRecientes = pacientes;
+    const PROF = { julian:'Julián', mauro:'Mauro', esteban:'Esteban' };
+    lista.innerHTML = pacientes.map(p => {
+      const sinCompletar = p.sin_completar === 1 || !p.obra_social;
+      const ini = p.nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const rest = p.sesiones_total - p.sesiones_usadas;
+      return `
+        <div class="pac-card${sinCompletar ? ' pac-card-pendiente' : ''}">
+          <div class="pac-top">
+            <div class="pac-avatar">${ini}</div>
+            <div class="pac-info">
+              <div class="pac-nombre">${p.nombre} ${sinCompletar ? '<span class="badge-completar">completar datos</span>' : ''}</div>
+              <div class="pac-sub">
+                ${p.obra_social || 'Sin obra social cargada'}${p.plan ? ' · ' + p.plan : ''}
+                <span class="prof-tag">${PROF[p.profesional]||p.profesional}</span>
+                <span class="prof-tag">último turno: ${p.ultima_fecha}</span>
+              </div>
+            </div>
+            <div class="pac-sesiones">
+              <div class="pac-num ${rest<=0?'agotado':rest<=2?'pocas':'ok'}">${rest}</div>
+              <div class="pac-label">de ${p.sesiones_total}</div>
+            </div>
+          </div>
+          <div class="pac-actions">
+            <button class="pac-btn pac-btn-edit" onclick="abrirEditarRecientes(${p.id})">Editar</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  let _pacientesRecientes = [];
+  function abrirEditarRecientes(id) {
+    const p = _pacientesRecientes.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('edit-id').value = p.id;
+    document.getElementById('edit-nombre').value = p.nombre;
+    document.getElementById('edit-os').value = p.obra_social || '';
+    document.getElementById('edit-plan').value = p.plan || '';
+    document.getElementById('edit-total').value = p.sesiones_total;
+    document.getElementById('edit-usadas').value = p.sesiones_usadas;
+    document.getElementById('edit-prof').value = p.profesional;
+    document.getElementById('modal-editar').dataset.fromRecientes = '1';
+    document.getElementById('modal-editar').classList.add('open');
   }
 
   // ─── SINCRONIZAR ──────────────────────────────────────────────────────────
@@ -573,8 +674,10 @@
         profesional: document.getElementById('edit-prof').value
       })
     });
+    const vinoDeRecientes = document.getElementById('modal-editar').dataset.fromRecientes === '1';
+    document.getElementById('modal-editar').dataset.fromRecientes = '';
     cerrarModal();
-    cargarPacientes();
+    if (vinoDeRecientes) { cargarRecientes(); } else { cargarPacientes(); }
     showToast('✅ Paciente actualizado');
   }
 
