@@ -7,9 +7,9 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --green-50:#E1F5EE; --green-100:#9FE1CB; --green-500:#1D9E75; --green-700:#0F6E56; --green-900:#04342C;
-      --gray-50:#F8F7F4; --gray-100:#EFEFEB; --gray-300:#D3D1C7; --gray-500:#888780; --gray-700:#444441; --gray-900:#1A1A18;
-      --amber-50:#FAEEDA; --amber-800:#633806; --red-50:#FCEBEB; --red-500:#E53E3E;
+      --green-50:#ede9d8; --green-100:#d8d0b3; --green-500:#7b753f; --green-700:#5a5530; --green-900:#1C1C1E;
+      --gray-50:#faf4f0; --gray-100:#f3ede6; --gray-300:#e0d8cf; --gray-500:#8a8684; --gray-700:#6b6b5a; --gray-900:#1C1C1E;
+      --amber-50:#FAEEDA; --amber-800:#633806; --red-50:#FCEBEB; --red-500:#E24B4A;
     }
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:'DM Sans',sans-serif; background:var(--gray-50); color:var(--gray-900); min-height:100vh; }
@@ -23,7 +23,7 @@
     .login-btn { width:100%; padding:12px; background:var(--green-500); color:white; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; cursor:pointer; }
     .login-error { color:var(--red-500); font-size:13px; margin-top:8px; display:none; }
 
-    .header { background:#2D4A3E; padding:1.25rem 1.5rem; }
+    .header { background:#1C1C1E; padding:1.25rem 1.5rem; }
     .header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
     .header-title { font-family:'DM Serif Display',serif; font-size:20px; color:white; }
     .header-actions { display:flex; gap:6px; flex-wrap:wrap; }
@@ -32,7 +32,7 @@
     .logout-btn { background:none; border:0.5px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.5); font-size:12px; padding:6px 10px; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif; }
     .controls { display:flex; gap:8px; flex-wrap:wrap; }
     .ctrl-input { flex:1; min-width:110px; border:0.5px solid rgba(255,255,255,0.2); border-radius:8px; padding:8px 10px; font-family:'DM Sans',sans-serif; font-size:13px; background:rgba(255,255,255,0.1); color:white; }
-    .ctrl-input option { background:#2D4A3E; }
+    .ctrl-input option { background:#1C1C1E; }
     .ctrl-input:focus { outline:none; border-color:var(--green-100); }
     .ctrl-btn { padding:8px 12px; background:var(--green-500); color:white; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap; }
     .ctrl-btn.sync { background:rgba(255,255,255,0.15); border:0.5px solid rgba(255,255,255,0.3); }
@@ -83,11 +83,11 @@
     .form-input:focus { outline:none; border-color:var(--green-500); }
     .form-select { flex:1; min-width:120px; border:0.5px solid var(--gray-300); border-radius:7px; padding:8px 10px; font-family:'DM Sans',sans-serif; font-size:13px; background:white; }
     .form-btn { padding:8px 16px; background:var(--green-500); color:white; border:none; border-radius:7px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap; }
-    .cerrar-btn { width:100%; padding:12px; background:#2D4A3E; color:white; border:none; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; margin-bottom:1rem; }
+    .cerrar-btn { width:100%; padding:12px; background:#1C1C1E; color:white; border:none; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; margin-bottom:1rem; }
 
     .pac-card { border:0.5px solid var(--gray-300); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
     .pac-top { display:flex; align-items:center; gap:10px; }
-    .pac-avatar { width:36px; height:36px; border-radius:50%; background:#2D4A3E; display:flex; align-items:center; justify-content:center; color:white; font-size:13px; font-weight:500; flex-shrink:0; }
+    .pac-avatar { width:36px; height:36px; border-radius:50%; background:#1C1C1E; display:flex; align-items:center; justify-content:center; color:white; font-size:13px; font-weight:500; flex-shrink:0; }
     .pac-info { flex:1; }
     .pac-nombre { font-size:14px; font-weight:500; color:var(--gray-900); }
     .pac-sub { font-size:12px; color:var(--gray-500); margin-top:2px; }
