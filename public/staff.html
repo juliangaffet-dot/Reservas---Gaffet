@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kine House — Equipo</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green-50:#E1F5EE; --green-100:#9FE1CB; --green-500:#1D9E75; --green-700:#0F6E56; --green-900:#04342C;
+      --gray-50:#F8F7F4; --gray-100:#EFEFEB; --gray-300:#D3D1C7; --gray-500:#888780; --gray-700:#444441; --gray-900:#1A1A18;
+      --red-500:#E53E3E;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--gray-50); color:var(--gray-900); min-height:100vh; }
+    .page-wrapper { max-width:480px; margin:0 auto; min-height:100vh; background:white; box-shadow:0 0 60px rgba(0,0,0,0.06); }
+
+    .login-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:2rem; }
+    .login-box { width:100%; max-width:340px; }
+    .login-logo { width:64px; height:64px; border-radius:14px; background:#2D4A3E; margin:0 auto 1.25rem; display:flex; align-items:center; justify-content:center; font-family:'DM Serif Display',serif; font-size:20px; color:white; }
+    .login-title { font-family:'DM Serif Display',serif; font-size:24px; color:var(--green-900); text-align:center; margin-bottom:4px; }
+    .login-sub { font-size:13px; color:var(--gray-500); text-align:center; margin-bottom:1.5rem; }
+    .login-input { width:100%; border:0.5px solid var(--gray-300); border-radius:8px; padding:12px 14px; font-family:'DM Sans',sans-serif; font-size:15px; margin-bottom:12px; }
+    .login-input:focus { outline:none; border-color:var(--green-500); }
+    .login-btn { width:100%; padding:12px; background:var(--green-500); color:white; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; cursor:pointer; }
+    .login-btn:hover { background:var(--green-700); }
+    .login-error { color:var(--red-500); font-size:13px; margin-top:8px; text-align:center; display:none; }
+
+    .panel { display:none; min-height:100vh; flex-direction:column; }
+    .header { background:#2D4A3E; padding:2rem 1.5rem 1.5rem; text-align:center; position:relative; }
+    .logout-btn { position:absolute; top:1.25rem; right:1.25rem; background:none; border:0.5px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.5); font-size:11px; padding:5px 10px; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .header-logo { width:56px; height:56px; border-radius:12px; background:white; margin:0 auto 0.75rem; display:flex; align-items:center; justify-content:center; font-family:'DM Serif Display',serif; font-size:18px; color:var(--green-700); }
+    .header-title { font-family:'DM Serif Display',serif; font-size:22px; color:white; }
+    .header-sub { font-size:12px; color:var(--green-100); margin-top:2px; }
+
+    .content { padding:2rem 1.5rem; flex:1; display:flex; flex-direction:column; gap:14px; }
+
+    .access-card { display:flex; align-items:center; gap:16px; background:white; border:0.5px solid var(--gray-300); border-radius:16px; padding:1.25rem; text-decoration:none; transition:all 0.15s; }
+    .access-card:hover { border-color:var(--green-500); background:var(--green-50); }
+    .access-icon { width:52px; height:52px; border-radius:12px; background:var(--green-50); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+    .access-info { flex:1; }
+    .access-title { font-size:15px; font-weight:500; color:var(--gray-900); margin-bottom:2px; }
+    .access-desc { font-size:12px; color:var(--gray-500); }
+    .access-arrow { font-size:20px; color:var(--gray-300); }
+  </style>
+</head>
+<body>
+
+<div id="login-screen" class="login-screen">
+  <div class="login-box">
+    <div class="login-logo">KH</div>
+    <div class="login-title">Equipo Kine House</div>
+    <div class="login-sub">Ingresá la contraseña del equipo</div>
+    <input type="password" id="inp-pass" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter') login()">
+    <button class="login-btn" onclick="login()">Ingresar</button>
+    <div class="login-error" id="login-error">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<div id="panel" class="page-wrapper panel">
+  <div class="header">
+    <button class="logout-btn" onclick="logout()">Salir</button>
+    <div class="header-logo">KH</div>
+    <div class="header-title">Kine House</div>
+    <div class="header-sub">Panel del equipo</div>
+  </div>
+
+  <div class="content">
+    <a class="access-card" href="/asistencia">
+      <div class="access-icon">📋</div>
+      <div class="access-info">
+        <div class="access-title">Asistencia y Pacientes</div>
+        <div class="access-desc">Control de turnos, sesiones y fichas de pacientes</div>
+      </div>
+      <div class="access-arrow">›</div>
+    </a>
+
+    <a class="access-card" href="https://kinehouseapp-production.up.railway.app/" target="_blank" rel="noopener noreferrer">
+      <div class="access-icon">🏋️</div>
+      <div class="access-info">
+        <div class="access-title">Rutinas</div>
+        <div class="access-desc">Planificación de ejercicios para pacientes</div>
+      </div>
+      <div class="access-arrow">›</div>
+    </a>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'kh_panel_pass';
+
+  function hoy() {
+    const arg = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
+    return arg.toISOString().substring(0, 10);
+  }
+
+  function entrarConPassword(pass) {
+    return fetch('/api/asistencia?fecha=' + hoy(), { headers: { 'x-panel-password': pass } })
+      .then(r => {
+        if (r.status === 401) return false;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('panel').style.display = 'flex';
+        return true;
+      }).catch(() => false);
+  }
+
+  function login() {
+    const pass = document.getElementById('inp-pass').value;
+    if (!pass) return;
+    entrarConPassword(pass).then(ok => {
+      if (ok) {
+        try { localStorage.setItem(STORAGE_KEY, pass); } catch(e) {}
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    });
+  }
+
+  function logout() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+    document.getElementById('panel').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('inp-pass').value = '';
+  }
+
+  (function intentarAutoLogin() {
+    let guardada = null;
+    try { guardada = localStorage.getItem(STORAGE_KEY); } catch(e) {}
+    if (guardada) {
+      entrarConPassword(guardada).then(ok => {
+        if (!ok) { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} }
+      });
+    }
+  })();
+</script>
+</body>
+</html>
