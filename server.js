@@ -449,5 +449,13 @@ app.get('/asistencia', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'asistencia.html'));
 });
 
+app.get('/inicio', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'inicio.html'));
+});
+
+app.get('/staff', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'staff.html'));
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Servidor corriendo en http://localhost:${PORT}`));
