@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kine House — Centro de Kinesiología y Fisioterapia</title>
+  <meta property="og:title" content="Kine House">
+  <meta property="og:description" content="Centro de Kinesiología y Fisioterapia · Readaptación Física en Salta">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green-50:#E1F5EE; --green-100:#9FE1CB; --green-500:#1D9E75; --green-700:#0F6E56; --green-900:#04342C;
+      --gray-50:#F8F7F4; --gray-100:#EFEFEB; --gray-300:#D3D1C7; --gray-500:#888780; --gray-700:#444441; --gray-900:#1A1A18;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--gray-50); color:var(--gray-900); min-height:100vh; }
+    .page-wrapper { max-width:480px; margin:0 auto; min-height:100vh; background:white; box-shadow:0 0 60px rgba(0,0,0,0.06); display:flex; flex-direction:column; }
+
+    .hero { background:#2D4A3E; padding:3rem 1.5rem 2.5rem; position:relative; overflow:hidden; text-align:center; }
+    .hero::before { content:''; position:absolute; top:-40px; right:-40px; width:180px; height:180px; border-radius:50%; background:rgba(180,155,80,0.15); }
+    .hero::after { content:''; position:absolute; bottom:-20px; left:-30px; width:140px; height:140px; border-radius:50%; background:rgba(180,155,80,0.08); }
+    .hero-logo { width:88px; height:88px; border-radius:16px; background:white; margin:0 auto 1.25rem; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1; font-family:'DM Serif Display',serif; font-size:28px; color:var(--green-700); }
+    .hero-title { font-family:'DM Serif Display',serif; font-size:32px; color:white; margin-bottom:8px; position:relative; z-index:1; }
+    .hero-sub { font-size:14px; color:var(--green-100); position:relative; z-index:1; line-height:1.5; }
+
+    .content { padding:2rem 1.5rem; flex:1; }
+
+    .section { margin-bottom:2rem; }
+    .section-title { font-family:'DM Serif Display',serif; font-size:19px; color:var(--green-900); margin-bottom:10px; }
+    .section-text { font-size:14px; color:var(--gray-700); line-height:1.65; }
+
+    .features { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:2rem; }
+    .feature-card { background:var(--gray-50); border:0.5px solid var(--gray-300); border-radius:14px; padding:16px 14px; text-align:center; }
+    .feature-icon { font-size:24px; margin-bottom:8px; }
+    .feature-text { font-size:12px; color:var(--gray-700); font-weight:500; line-height:1.4; }
+
+    .location-card { background:var(--green-50); border:0.5px solid var(--green-100); border-radius:14px; padding:1.1rem 1.25rem; margin-bottom:2rem; }
+    .location-title { font-size:13px; font-weight:500; color:var(--green-900); margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+    .location-addr { font-size:13px; color:var(--green-700); }
+    .location-link { font-size:13px; color:var(--green-700); text-decoration:underline; margin-top:6px; display:inline-block; }
+
+    .team-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:0.5rem; }
+    .team-chip { background:var(--gray-100); border-radius:99px; padding:5px 12px; font-size:12px; color:var(--gray-700); }
+
+    .cta-btn { display:block; width:100%; padding:16px; background:var(--green-500); color:white; text-align:center; text-decoration:none; border-radius:14px; font-size:16px; font-weight:500; box-shadow:0 4px 14px rgba(29,158,117,0.3); transition:background 0.15s; }
+    .cta-btn:hover { background:var(--green-700); }
+    .cta-sub { text-align:center; font-size:12px; color:var(--gray-500); margin-top:10px; }
+
+    .footer { padding:1.5rem; text-align:center; border-top:0.5px solid var(--gray-100); }
+    .footer-staff-link { font-size:11px; color:var(--gray-300); text-decoration:none; letter-spacing:0.04em; }
+    .footer-staff-link:hover { color:var(--gray-500); }
+
+    @media (max-width:480px) {
+      .hero { padding:2.5rem 1.25rem 2rem; }
+      .content { padding:1.75rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <div class="hero">
+    <div class="hero-logo">KH</div>
+    <div class="hero-title">Kine House</div>
+    <div class="hero-sub">Centro de Kinesiología y Fisioterapia<br>Readaptación Física</div>
+  </div>
+
+  <div class="content">
+
+    <div class="section">
+      <div class="section-title">Quiénes somos</div>
+      <div class="section-text">
+        Somos un equipo de kinesiólogos especializados en rehabilitación física y readaptación deportiva. Acompañamos a cada paciente con un trato cercano y tratamientos personalizados, combinando experiencia clínica con un enfoque integral de la recuperación.
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">🦴</div>
+        <div class="feature-text">Kinesiología y Fisioterapia</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏃</div>
+        <div class="feature-text">Readaptación Física</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💪</div>
+        <div class="feature-text">Rehabilitación Deportiva</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <div class="feature-text">Planes de ejercicios personalizados</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Nuestro equipo</div>
+      <div class="team-row">
+        <span class="team-chip">Lic. Julián Gaffet · M.P. 1321</span>
+      </div>
+      <div class="team-row">
+        <span class="team-chip">Lic. Mauro Ayub · M.P. 1263</span>
+      </div>
+      <div class="team-row">
+        <span class="team-chip">Lic. Esteban Videla · M.P. 1337</span>
+      </div>
+    </div>
+
+    <div class="location-card">
+      <div class="location-title">📍 Ubicación</div>
+      <div class="location-addr">Cmte. Piedrabuena 820, Salta</div>
+      <a class="location-link" href="https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5" target="_blank" rel="noopener noreferrer">Ver en Google Maps ↗</a>
+    </div>
+
+    <a class="cta-btn" href="/">Agendar un turno</a>
+    <div class="cta-sub">Reservá tu sesión online en pocos pasos</div>
+
+  </div>
+
+  <div class="footer">
+    <a class="footer-staff-link" href="/staff">Acceso equipo Kine House</a>
+  </div>
+
+</div>
+</body>
+</html>
