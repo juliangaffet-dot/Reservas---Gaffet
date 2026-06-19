@@ -271,36 +271,56 @@
 
 <script>
   let password = '';
+  const STORAGE_KEY = 'kh_panel_pass';
 
   function hoy() {
     const arg = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
     return arg.toISOString().substring(0, 10);
   }
 
+  function entrarConPassword(pass) {
+    return fetch('/api/asistencia?fecha=' + hoy(), { headers: { 'x-panel-password': pass } })
+      .then(r => {
+        if (r.status === 401) return false;
+        password = pass;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+        document.getElementById('ctrl-fecha').value = hoy();
+        cargarAsistencia();
+        return true;
+      }).catch(() => false);
+  }
+
   function login() {
     const pass = document.getElementById('inp-pass').value;
     if (!pass) return;
-    password = pass;
-    fetch('/api/asistencia?fecha=' + hoy(), { headers: { 'x-panel-password': pass } })
-      .then(r => {
-        if (r.status === 401) {
-          document.getElementById('login-error').style.display = 'block';
-          password = '';
-        } else {
-          document.getElementById('login-screen').style.display = 'none';
-          document.getElementById('panel').style.display = 'block';
-          document.getElementById('ctrl-fecha').value = hoy();
-          cargarAsistencia();
-        }
-      }).catch(() => { document.getElementById('login-error').style.display = 'block'; });
+    entrarConPassword(pass).then(ok => {
+      if (ok) {
+        try { localStorage.setItem(STORAGE_KEY, pass); } catch(e) {}
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    });
   }
 
   function logout() {
     password = '';
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
     document.getElementById('panel').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('inp-pass').value = '';
   }
+
+  // Auto-login si hay contraseña guardada de una sesión anterior
+  (function intentarAutoLogin() {
+    let guardada = null;
+    try { guardada = localStorage.getItem(STORAGE_KEY); } catch(e) {}
+    if (guardada) {
+      entrarConPassword(guardada).then(ok => {
+        if (!ok) { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} }
+      });
+    }
+  })();
 
   function switchTab(tab) {
     ['asistencia','pacientes'].forEach(t => {
