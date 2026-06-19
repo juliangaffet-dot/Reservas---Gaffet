@@ -10,7 +10,12 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── BASE DE DATOS SQLite ─────────────────────────────────────────────────────
-const db = new Database(path.join(__dirname, 'asistencia.db'));
+// Se guarda en /data (Volume persistente de Railway) para que sobreviva a cada deploy.
+// Si /data no existe (ej. corriendo local), cae de nuevo a la carpeta del proyecto.
+const fs = require('fs');
+const DB_DIR = fs.existsSync('/data') ? '/data' : __dirname;
+const db = new Database(path.join(DB_DIR, 'asistencia.db'));
+console.log(`📦 Base de datos en: ${path.join(DB_DIR, 'asistencia.db')}`);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS turnos (
