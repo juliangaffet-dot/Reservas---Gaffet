@@ -375,9 +375,22 @@ app.get('/api/pacientes/recientes', authPanel, (req, res) => {
   `;
   const params = [desde, hasta];
   if (profesional && profesional !== 'todos') { query += ' AND p.profesional = ?'; params.push(profesional); }
-  query += ' GROUP BY p.id ORDER BY (p.sin_completar = 1 OR p.obra_social = "") DESC, ultima_fecha DESC';
+  query += ' GROUP BY p.id';
 
-  res.json({ pacientes: db.prepare(query).all(...params) });
+  try {
+    let pacientes = db.prepare(query).all(...params);
+    // Ordenar en JS: primero los que faltan completar, después por fecha más reciente
+    pacientes.sort((a, b) => {
+      const aFalta = (a.sin_completar === 1 || !a.obra_social) ? 1 : 0;
+      const bFalta = (b.sin_completar === 1 || !b.obra_social) ? 1 : 0;
+      if (aFalta !== bFalta) return bFalta - aFalta;
+      return (b.ultima_fecha || '').localeCompare(a.ultima_fecha || '');
+    });
+    res.json({ pacientes });
+  } catch (err) {
+    console.error('Error pacientes/recientes:', err.message);
+    res.status(500).json({ error: 'Error al buscar pacientes recientes' });
+  }
 });
 
 // ─── API ASISTENCIA ───────────────────────────────────────────────────────────
