@@ -570,12 +570,7 @@
     } else if (profId === 'esteban') {
       // Esteban: sin turno mañana
     } else {
-      // ✅ Julian: lun (1) y mar (2) → sin horarios mañana
-      //            mié (3), jue (4), vie (5) → 08:00 y 08:30 (3 cupos)
-      if ([3,4,5].includes(dow)) {
-        slots.push('08:00');
-        slots.push('08:30');
-      }
+      // Julian: sin horarios mañana ningún día
     }
     return slots;
   }
