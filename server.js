@@ -237,8 +237,8 @@ app.get('/cancelar', async (req, res) => {
 
   // Verificar que no sea menos de 2 horas antes
   const slotTime = new Date(turno.fecha + 'T' + turno.hora + ':00-03:00');
-  if (slotTime - new Date() < 2 * 60 * 60 * 1000) {
-    return res.send(paginaCancelacion('error', 'No se puede cancelar con menos de 2 horas de anticipación. Comunicate directamente con el centro.'));
+  if (slotTime - new Date() < 30 * 60 * 1000) {
+    return res.send(paginaCancelacion('error', 'No se puede cancelar con menos de 30 minutos de anticipación. Comunicate directamente con el centro.'));
   }
 
   // Mostrar página de confirmación de cancelación
