@@ -233,107 +233,45 @@
   const CAPACIDAD_MANANA = 4;
   const CAPACIDAD_TARDE  = 2;
 
-  // ── PERÍODO MUNDIAL: hasta el 14/07/2026 inclusive ────────────────────────
-  const FECHA_LIMITE_MUNDIAL = new Date('2026-07-14T23:59:59-03:00');
-
-  function esPeriodoMundial(dateStr) {
-    return new Date(dateStr + 'T12:00:00-03:00') <= FECHA_LIMITE_MUNDIAL;
-  }
-
-  // Slots de Mauro durante el Mundial (todos 2 cupos)
-  // Mañana: lun(1) y mié(3) → 10:30, 11:00, 11:30
-  //         mar(2) y jue(4) → 09:00, 09:30, 10:00, 10:30, 11:00, 11:30
-  //         vie(5)          → sin mañana
-  // Tarde:  lun-vie         → 15:00 a 19:15 cada 30 min
-  const CAP_MUNDIAL = 2;
-
-  const SLOTS_TARDE_MUNDIAL = ['15:00','15:30','16:00','16:30','17:00','17:30','18:00','18:30','19:00','19:15'];
-
-  function getSlotsMananaMauroMundial(dow) {
-    if (dow === 1 || dow === 3) return ['10:30','11:00','11:30'];
-    if (dow === 2 || dow === 4 || dow === 5) return ['09:00','09:30','10:00','10:30','11:00','11:30'];
-    return [];
-  }
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const reservasLocales = {};
-  let cuposDelDia = {};
-  let conAcomp = false;
-  let currentWeekOffset = 0;
-  let selectedDate = null;
-  let selectedSlot = null;
-  let selectedCap = null;
-  let carrito = [];
-  const MAX_TURNOS = 5;
-  let profesionalActual = null;
-
-  function pad(n) { return String(n).padStart(2,'0'); }
-  function getKey(d, s) { return d + '_' + s; }
-
-  function getCuposUsados(fecha, slot) {
-    return (reservasLocales[getKey(fecha, slot)] || 0) + (cuposDelDia[slot] || 0);
-  }
-
   function getSlotsManana(dateStr) {
     const profId = profesionalActual ? profesionalActual.id : 'julian';
     const dow = new Date(dateStr + 'T12:00:00').getDay();
-
-    if (esPeriodoMundial(dateStr)) {
-      // Solo Mauro tiene mañana durante el Mundial
-      if (profId === 'mauro') return getSlotsMananaMauroMundial(dow);
-      return [];
+    // Mauro: lun-vie 09:00 a 11:30, 3 cupos
+    if (profId === 'mauro' && [1,2,3,4,5].includes(dow)) {
+      const slots = [];
+      for (let m = 9*60; m <= 11*60+30; m += 30)
+        slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+      return slots;
     }
-
-    // Post-Mundial — lógica normal
-    if (profId === 'mauro') {
-      if ([1,2,3,4,5].includes(dow)) {
-        const slots = [];
-        for (let m = 9*60; m < 12*60; m += 30)
-          slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
-        return slots;
-      }
-    }
-    // Julian y Esteban: sin mañana
     return [];
   }
 
   function getSlotsTarde(dateStr) {
     const profId = profesionalActual ? profesionalActual.id : 'julian';
     const dow = new Date(dateStr + 'T12:00:00').getDay();
-
-    if (esPeriodoMundial(dateStr)) {
-      if (profId === 'mauro') return SLOTS_TARDE_MUNDIAL;
-      return []; // Julian y Esteban sin horarios
-    }
-
-    // Post-Mundial — lógica normal
+    const slots = [];
     if (profId === 'mauro') {
+      // Lun-Jue: 15:00 a 18:30 | Vie: 15:00 a 17:30
       const endMin = dow === 5 ? 18*60 : 19*60;
-      const slots = [];
       for (let m = 15*60; m < endMin; m += 30)
         slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
-      return slots;
     } else if (profId === 'esteban') {
-      const slots = [];
-      for (let m = 15*60; m < 20*60; m += 30)
+      // Lun-Vie: 15:00 a 19:00
+      for (let m = 15*60; m < 19*60+30; m += 30)
         slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
-      return slots;
     } else {
-      // Julian: mié hasta 19:00, resto hasta 20:30
-      const endMin = dow === 3 ? 19*60 : 20*60 + 30;
-      const slots = [];
-      for (let m = 16*60+30; m < endMin; m += 30)
+      // Julian: Lun-Vie 16:30 a 19:00
+      for (let m = 16*60+30; m < 19*60+30; m += 30)
         slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
-      return slots;
     }
+    return slots;
   }
 
   function getCapacidadSlot(slot, dateStr) {
     const profId = profesionalActual ? profesionalActual.id : 'julian';
-    if (esPeriodoMundial(dateStr) && profId === 'mauro') return CAP_MUNDIAL;
-    // Lógica normal: mañana = 4, tarde = 2
     const manana = getSlotsManana(dateStr);
-    return manana.includes(slot) ? CAPACIDAD_MANANA : CAPACIDAD_TARDE;
+    if (profId === 'mauro' && manana.includes(slot)) return 3;
+    return 2;
   }
 
   function getWeekDates(offset) {
@@ -462,15 +400,7 @@
     const profId = profesionalActual ? profesionalActual.id : 'julian';
 
     if (!slots.length) {
-      if (esPeriodoMundial(dateStr) && profId !== 'mauro') {
-        if (id === 'slots-tarde') {
-          c.innerHTML = '<span style="font-size:13px;color:#A32D2D;">⚠️ Sin turnos disponibles hasta el 15 de julio</span>';
-        } else {
-          c.innerHTML = '<span style="font-size:13px;color:var(--gray-500)">Sin horarios</span>';
-        }
-      } else {
-        c.innerHTML = '<span style="font-size:13px;color:var(--gray-500)">Sin horarios</span>';
-      }
+      c.innerHTML = '<span style="font-size:13px;color:var(--gray-500)">Sin horarios</span>';
       return;
     }
 
