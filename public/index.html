@@ -233,6 +233,17 @@
   const CAPACIDAD_MANANA = 4;
   const CAPACIDAD_TARDE  = 2;
 
+  const reservasLocales = {};
+  let cuposDelDia = {};
+  let conAcomp = false;
+  let currentWeekOffset = 0;
+  let selectedDate = null;
+  let selectedSlot = null;
+  let selectedCap = null;
+  let carrito = [];
+  const MAX_TURNOS = 5;
+  let profesionalActual = null;
+
   function getSlotsManana(dateStr) {
     const profId = profesionalActual ? profesionalActual.id : 'julian';
     const dow = new Date(dateStr + 'T12:00:00').getDay();
