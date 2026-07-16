@@ -4,133 +4,109 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kine House — Reservar Turno</title>
-  <meta property="og:title" content="Kine House — Reservar Turno">
-  <meta property="og:description" content="Centro de Kinesiología y Fisioterapia · Readaptación Física. Reservá tu turno online.">
-  <meta property="og:url" content="https://reservas-kinehouse.up.railway.app">
-  <meta property="og:type" content="website">
   <meta name="description" content="Centro de Kinesiología y Fisioterapia · Readaptación Física. Reservá tu turno online.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --green-50: #E1F5EE;
-      --green-100: #9FE1CB;
-      --green-500: #2D4A3E;
-      --green-700: #1f352c;
-      --green-900: #14241d;
-      --amber-50: #FAEEDA;
-      --amber-800: #633806;
-      --gray-50: #faf4f0;
-      --gray-100: #f3ede6;
-      --gray-300: #e0d8cf;
-      --gray-500: #8a8684;
-      --gray-700: #6b6b5a;
-      --gray-900: #2D4A3E;
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 18px;
+      --green-50:#E1F5EE;--green-100:#9FE1CB;--green-500:#2D4A3E;--green-700:#1f352c;--green-900:#14241d;
+      --amber-800:#633806;--gray-50:#faf4f0;--gray-100:#f3ede6;--gray-300:#e0d8cf;
+      --gray-500:#8a8684;--gray-700:#6b6b5a;--gray-900:#2D4A3E;
+      --radius-sm:8px;--radius-md:12px;--radius-lg:18px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'DM Sans', sans-serif; background: var(--gray-50); color: var(--gray-900); min-height: 100vh; padding: 0; }
-    .page-wrapper { max-width: 480px; margin: 0 auto; min-height: 100vh; background: white; box-shadow: 0 0 60px rgba(0,0,0,0.06); }
-    .hero { background: #2D4A3E; padding: 2rem 1.5rem 1.5rem; position: relative; overflow: hidden; }
-    .hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: rgba(180,155,80,0.15); }
-    .hero::after { content: ''; position: absolute; bottom: -20px; left: 30px; width: 100px; height: 100px; border-radius: 50%; background: rgba(180,155,80,0.08); }
-    .hero-name { font-family: 'DM Serif Display', serif; font-size: 24px; color: white; line-height: 1.2; margin-bottom: 4px; position: relative; z-index: 1; }
-    .hero-mp { font-size: 13px; color: var(--green-100); margin-bottom: 14px; position: relative; z-index: 1; }
-    .hero-meta { display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }
-    .hero-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 4px 10px; border-radius: 99px; background: rgba(255,255,255,0.1); color: var(--green-100); border: 0.5px solid rgba(255,255,255,0.15); }
-    .content { padding: 1.5rem; }
-    .step { display: none; }
-    .step.active { display: block; }
-    .section-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 12px; }
-    .week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .week-nav button { width: 32px; height: 32px; border: 0.5px solid var(--gray-300); border-radius: var(--radius-sm); background: white; cursor: pointer; font-size: 16px; color: var(--gray-700); display: flex; align-items: center; justify-content: center; }
-    .week-nav button:hover { background: var(--gray-100); }
-    .week-label { font-size: 14px; font-weight: 500; color: var(--gray-700); }
-    .days-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 1.5rem; }
-    .day-card { background: white; border: 0.5px solid var(--gray-300); border-radius: var(--radius-md); padding: 10px 6px; text-align: center; cursor: pointer; transition: all 0.15s; }
-    .day-card:hover { border-color: var(--green-500); }
-    .day-card.selected { background: var(--green-50); border: 1.5px solid var(--green-500); }
-    .day-card.past { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
-    .day-name { font-size: 11px; color: var(--gray-500); margin-bottom: 4px; }
-    .day-number { font-size: 18px; font-weight: 500; color: var(--gray-900); }
-    .day-card.selected .day-name { color: var(--green-700); }
-    .day-card.selected .day-number { color: var(--green-700); }
-    .slots-section { margin-bottom: 1.25rem; }
-    .slots-section-title { font-size: 12px; color: var(--gray-500); margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
-    .slots-grid { display: flex; flex-wrap: wrap; gap: 7px; }
-    .slot-btn { background: white; border: 0.5px solid var(--gray-300); border-radius: var(--radius-sm); padding: 8px 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--gray-900); cursor: pointer; text-align: center; min-width: 80px; transition: all 0.15s; }
-    .slot-btn:hover:not(.full):not(.loading) { border-color: var(--green-500); background: var(--green-50); }
-    .slot-btn.selected { background: var(--green-50); border: 1.5px solid var(--green-500); color: var(--green-700); }
-    .slot-btn.full { background: var(--gray-100); color: var(--gray-500); cursor: not-allowed; text-decoration: line-through; }
-    .slot-btn.loading { opacity: 0.5; cursor: wait; }
-    .cupos-tag { display: block; font-size: 10px; font-weight: 400; margin-top: 2px; }
-    .cupos-tag.ok { color: var(--green-500); }
-    .cupos-tag.last { color: var(--amber-800); }
-    .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--gray-500); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-    .form-group input { width: 100%; border: 0.5px solid var(--gray-300); border-radius: var(--radius-sm); padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--gray-900); background: white; transition: border-color 0.15s; }
-    .form-group input:focus { outline: none; border-color: var(--green-500); box-shadow: 0 0 0 3px rgba(29,158,117,0.1); }
-    .resumen-box { background: var(--green-50); border: 0.5px solid var(--green-100); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
-    .resumen-row { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--green-900); margin-bottom: 6px; }
-    .resumen-row:last-child { margin-bottom: 0; }
-    .resumen-row strong { font-weight: 500; min-width: 72px; display: inline-block; }
-    .maps-link { color: var(--green-700); text-decoration: underline; cursor: pointer; font-size: 14px; }
-    .acomp-toggle { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 0.5px solid var(--gray-300); border-radius: var(--radius-md); cursor: pointer; margin-bottom: 1rem; transition: all 0.15s; background: white; }
-    .acomp-toggle:hover { border-color: var(--green-500); background: var(--green-50); }
-    .acomp-toggle.active { border: 1.5px solid var(--green-500); background: var(--green-50); }
-    .acomp-toggle-icon { font-size: 20px; color: var(--gray-500); }
-    .acomp-toggle.active .acomp-toggle-icon { color: var(--green-500); }
-    .acomp-toggle-text { flex: 1; }
-    .acomp-toggle-text strong { font-size: 14px; font-weight: 500; display: block; color: var(--gray-900); }
-    .acomp-toggle.active .acomp-toggle-text strong { color: var(--green-700); }
-    .acomp-toggle-text span { font-size: 12px; color: var(--gray-500); }
-    .acomp-check { width: 22px; height: 22px; border-radius: 50%; border: 0.5px solid var(--gray-300); display: flex; align-items: center; justify-content: center; font-size: 13px; color: transparent; transition: all 0.15s; }
-    .acomp-toggle.active .acomp-check { background: var(--green-500); border-color: var(--green-500); color: white; }
-    .acomp-form { display: none; background: var(--gray-50); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1rem; border: 0.5px solid var(--gray-300); }
-    .acomp-form.visible { display: block; }
-    .acomp-form .form-group { margin-bottom: 0.75rem; }
-    .acomp-form .form-group:last-child { margin-bottom: 0; }
-    .info-note { display: flex; align-items: flex-start; gap: 8px; background: var(--gray-50); border: 0.5px solid var(--gray-300); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 1rem; font-size: 13px; color: var(--gray-700); line-height: 1.5; }
-    .btn { width: 100%; padding: 13px; border: none; border-radius: var(--radius-md); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
-    .btn-primary { background: var(--green-500); color: white; }
-    .btn-primary:hover:not(:disabled) { background: var(--green-700); }
-    .btn-primary:disabled { background: var(--gray-300); color: var(--gray-500); cursor: not-allowed; }
-    .btn-ghost { background: none; width: auto; border: 0.5px solid var(--gray-300); color: var(--gray-700); padding: 9px 16px; margin-bottom: 1rem; font-size: 14px; }
-    .btn-ghost:hover { background: var(--gray-100); }
-    .btn-spinner { display: none; }
-    .btn-primary.loading .btn-text { display: none; }
-    .btn-primary.loading .btn-spinner { display: inline; }
-    .success-screen { text-align: center; padding: 2.5rem 1rem 2rem; }
-    .success-circle { width: 72px; height: 72px; border-radius: 50%; background: var(--green-50); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-size: 36px; }
-    .success-title { font-family: 'DM Serif Display', serif; font-size: 24px; margin-bottom: 6px; color: var(--gray-900); }
-    .success-sub { font-size: 14px; color: var(--gray-500); margin-bottom: 4px; }
-    .success-detail { background: var(--green-50); border: 0.5px solid var(--green-100); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin: 1.25rem 0; text-align: left; }
-    .success-detail p { font-size: 14px; color: var(--green-900); margin-bottom: 5px; }
-    .success-detail p:last-child { margin-bottom: 0; }
-    .error-banner { display: none; background: #FCEBEB; border: 0.5px solid #F09595; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; color: #A32D2D; margin-bottom: 1rem; }
-    .carrito-item { display: flex; align-items: center; gap: 10px; background: var(--green-50); border: 0.5px solid var(--green-100); border-radius: var(--radius-md); padding: 10px 14px; font-size: 14px; color: var(--green-900); }
-    .carrito-item-info { flex: 1; }
-    .carrito-item-dia { font-weight: 500; }
-    .carrito-item-hora { font-size: 12px; color: var(--green-700); }
-    .carrito-item-remove { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--gray-500); padding: 0 4px; line-height: 1; }
-    .carrito-item-remove:hover { color: #A32D2D; }
-    .prof-card { display: flex; align-items: center; gap: 14px; background: white; border: 0.5px solid var(--gray-300); border-radius: var(--radius-lg); padding: 14px 16px; cursor: pointer; transition: all 0.15s; }
-    .prof-card:hover { border-color: var(--green-500); background: var(--green-50); }
-    .prof-avatar { width: 48px; height: 48px; border-radius: 50%; background: #2D4A3E; display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 16px; font-weight: 500; color: white; flex-shrink: 0; }
-    .prof-info { flex: 1; }
-    .prof-nombre { font-size: 15px; font-weight: 500; color: var(--gray-900); }
-    .prof-mp { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
-    .prof-arrow { font-size: 20px; color: var(--gray-500); }
-    @media (max-width: 480px) { .hero { padding: 1.5rem 1.25rem 1.25rem; } .content { padding: 1.25rem; } }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--gray-50);color:var(--gray-900);min-height:100vh;}
+    .page-wrapper{max-width:480px;margin:0 auto;min-height:100vh;background:white;box-shadow:0 0 60px rgba(0,0,0,0.06);}
+    .hero{background:#2D4A3E;padding:2rem 1.5rem 1.5rem;position:relative;overflow:hidden;}
+    .hero::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(180,155,80,0.15);}
+    .hero::after{content:'';position:absolute;bottom:-20px;left:30px;width:100px;height:100px;border-radius:50%;background:rgba(180,155,80,0.08);}
+    .hero-name{font-family:'DM Serif Display',serif;font-size:24px;color:white;line-height:1.2;margin-bottom:4px;position:relative;z-index:1;}
+    .hero-mp{font-size:13px;color:var(--green-100);margin-bottom:14px;position:relative;z-index:1;}
+    .hero-meta{display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1;}
+    .hero-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.1);color:var(--green-100);border:0.5px solid rgba(255,255,255,0.15);}
+    .content{padding:1.5rem;}
+    .step{display:none;}.step.active{display:block;}
+    .section-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:12px;}
+    .week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .week-nav button{width:32px;height:32px;border:0.5px solid var(--gray-300);border-radius:var(--radius-sm);background:white;cursor:pointer;font-size:16px;color:var(--gray-700);display:flex;align-items:center;justify-content:center;}
+    .week-nav button:hover{background:var(--gray-100);}
+    .week-label{font-size:14px;font-weight:500;color:var(--gray-700);}
+    .days-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:1.5rem;}
+    .day-card{background:white;border:0.5px solid var(--gray-300);border-radius:var(--radius-md);padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.15s;}
+    .day-card:hover{border-color:var(--green-500);}
+    .day-card.selected{background:var(--green-50);border:1.5px solid var(--green-500);}
+    .day-card.past{opacity:0.35;cursor:not-allowed;pointer-events:none;}
+    .day-name{font-size:11px;color:var(--gray-500);margin-bottom:4px;}
+    .day-number{font-size:18px;font-weight:500;color:var(--gray-900);}
+    .day-card.selected .day-name,.day-card.selected .day-number{color:var(--green-700);}
+    .slots-section{margin-bottom:1.25rem;}
+    .slots-section-title{font-size:12px;color:var(--gray-500);margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+    .slots-grid{display:flex;flex-wrap:wrap;gap:7px;}
+    .slot-btn{background:white;border:0.5px solid var(--gray-300);border-radius:var(--radius-sm);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--gray-900);cursor:pointer;text-align:center;min-width:80px;transition:all 0.15s;}
+    .slot-btn:hover:not(.full){border-color:var(--green-500);background:var(--green-50);}
+    .slot-btn.selected{background:var(--green-50);border:1.5px solid var(--green-500);color:var(--green-700);}
+    .slot-btn.full{background:var(--gray-100);color:var(--gray-500);cursor:not-allowed;text-decoration:line-through;}
+    .cupos-tag{display:block;font-size:10px;font-weight:400;margin-top:2px;}
+    .cupos-tag.ok{color:var(--green-500);}.cupos-tag.last{color:var(--amber-800);}
+    .form-group{margin-bottom:1rem;}
+    .form-group label{display:block;font-size:12px;font-weight:500;color:var(--gray-500);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;}
+    .form-group input{width:100%;border:0.5px solid var(--gray-300);border-radius:var(--radius-sm);padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--gray-900);background:white;transition:border-color 0.15s;}
+    .form-group input:focus{outline:none;border-color:var(--green-500);box-shadow:0 0 0 3px rgba(29,158,117,0.1);}
+    .resumen-box{background:var(--green-50);border:0.5px solid var(--green-100);border-radius:var(--radius-md);padding:1rem 1.25rem;margin-bottom:1.25rem;}
+    .resumen-row{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--green-900);margin-bottom:6px;}
+    .resumen-row:last-child{margin-bottom:0;}
+    .maps-link{color:var(--green-700);text-decoration:underline;cursor:pointer;font-size:14px;}
+    .acomp-toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border:0.5px solid var(--gray-300);border-radius:var(--radius-md);cursor:pointer;margin-bottom:1rem;transition:all 0.15s;background:white;}
+    .acomp-toggle:hover{border-color:var(--green-500);background:var(--green-50);}
+    .acomp-toggle.active{border:1.5px solid var(--green-500);background:var(--green-50);}
+    .acomp-toggle-icon{font-size:20px;color:var(--gray-500);}
+    .acomp-toggle.active .acomp-toggle-icon{color:var(--green-500);}
+    .acomp-toggle-text{flex:1;}
+    .acomp-toggle-text strong{font-size:14px;font-weight:500;display:block;color:var(--gray-900);}
+    .acomp-toggle.active .acomp-toggle-text strong{color:var(--green-700);}
+    .acomp-toggle-text span{font-size:12px;color:var(--gray-500);}
+    .acomp-check{width:22px;height:22px;border-radius:50%;border:0.5px solid var(--gray-300);display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent;transition:all 0.15s;}
+    .acomp-toggle.active .acomp-check{background:var(--green-500);border-color:var(--green-500);color:white;}
+    .acomp-form{display:none;background:var(--gray-50);border-radius:var(--radius-md);padding:1rem 1.25rem;margin-bottom:1rem;border:0.5px solid var(--gray-300);}
+    .acomp-form.visible{display:block;}
+    .info-note{display:flex;align-items:flex-start;gap:8px;background:var(--gray-50);border:0.5px solid var(--gray-300);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:1rem;font-size:13px;color:var(--gray-700);line-height:1.5;}
+    .btn{width:100%;padding:13px;border:none;border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:all 0.15s;}
+    .btn-primary{background:var(--green-500);color:white;}
+    .btn-primary:hover:not(:disabled){background:var(--green-700);}
+    .btn-primary:disabled{background:var(--gray-300);color:var(--gray-500);cursor:not-allowed;}
+    .btn-ghost{background:none;width:auto;border:0.5px solid var(--gray-300);color:var(--gray-700);padding:9px 16px;margin-bottom:1rem;font-size:14px;}
+    .btn-ghost:hover{background:var(--gray-100);}
+    .btn-spinner{display:none;}
+    .btn-primary.loading .btn-text{display:none;}
+    .btn-primary.loading .btn-spinner{display:inline;}
+    .success-screen{text-align:center;padding:2.5rem 1rem 2rem;}
+    .success-circle{width:72px;height:72px;border-radius:50%;background:var(--green-50);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:36px;}
+    .success-title{font-family:'DM Serif Display',serif;font-size:24px;margin-bottom:6px;color:var(--gray-900);}
+    .success-sub{font-size:14px;color:var(--gray-500);margin-bottom:4px;}
+    .success-detail{background:var(--green-50);border:0.5px solid var(--green-100);border-radius:var(--radius-md);padding:1rem 1.25rem;margin:1.25rem 0;text-align:left;}
+    .success-detail p{font-size:14px;color:var(--green-900);margin-bottom:5px;}
+    .error-banner{display:none;background:#FCEBEB;border:0.5px solid #F09595;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#A32D2D;margin-bottom:1rem;}
+    .carrito-item{display:flex;align-items:center;gap:10px;background:var(--green-50);border:0.5px solid var(--green-100);border-radius:var(--radius-md);padding:10px 14px;font-size:14px;color:var(--green-900);}
+    .carrito-item-info{flex:1;}
+    .carrito-item-dia{font-weight:500;}
+    .carrito-item-hora{font-size:12px;color:var(--green-700);}
+    .carrito-item-remove{background:none;border:none;cursor:pointer;font-size:18px;color:var(--gray-500);padding:0 4px;line-height:1;}
+    .carrito-item-remove:hover{color:#A32D2D;}
+    .prof-card{display:flex;align-items:center;gap:14px;background:white;border:0.5px solid var(--gray-300);border-radius:var(--radius-lg);padding:14px 16px;cursor:pointer;transition:all 0.15s;}
+    .prof-card:hover{border-color:var(--green-500);background:var(--green-50);}
+    .prof-avatar{width:48px;height:48px;border-radius:50%;background:#2D4A3E;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:16px;color:white;flex-shrink:0;}
+    .prof-info{flex:1;}
+    .prof-nombre{font-size:15px;font-weight:500;color:var(--gray-900);}
+    .prof-mp{font-size:13px;color:var(--gray-500);margin-top:2px;}
+    .prof-arrow{font-size:20px;color:var(--gray-500);}
+    @media(max-width:480px){.hero{padding:1.5rem 1.25rem 1.25rem;}.content{padding:1.25rem;}}
   </style>
 </head>
 <body>
 <div class="page-wrapper">
   <div class="hero">
-    <div style="background:white; width:74px; height:74px; border-radius:12px; overflow:hidden; padding:6px; border:none; box-shadow:0 2px 8px rgba(0,0,0,0.2); margin-bottom:14px; position:relative; z-index:1;">
-      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABDgAAAOVCAYAAACMNVAxAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAADM+UlEQVR4nOz9eZAcaXrfef7e9/UjIjKRAArVF8m+68CNxI2q6m6yyRZFspsUJV4ixUOj0Y7G1tbWbNZsdtc0ZqsZiZQoaWxnR3/M2kqiKFEjcigNJVGkxCH7rO46UEDhBgroQ82bfVUVgDzicPf3ffePCHdEJs4CkIg8vh+z6MiIjAQcXZ4R7j9/3eeRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIEkf/vD+OOltAAAAD5+d9AYAAADczrFjx+Jzzz33UAOJJ596n/7+L/6f4ye+fztBBwAA60gy6Q0AAABYbv/+/THLMjnnFEJ4qH+2S4Kq6k19/BPP6tCh7fFTn35BL7z0unmofwkAAHjkCDgAAMCqceDAgdhut2WtVVEU6na7ivHhFlpURVfOSd96/c/U7szoh37oe/TkB/8w/vK/PE7IAQDAGkbAAQAAJu7o0aMxz3OFEFSWpaqqMsbY1NSUnHPggZMmHoJiQDkGGWmSOW9ZaYYam21qSs4pqeSSTi/p9JKW00s6vaFNLwIwAAAJCSURBVKTTS1pOL+n0hja9CMAAACQJAAAB" alt="Kine House" style="width:100%; height:100%; object-fit:contain;">
+    <div style="background:white;width:64px;height:64px;border-radius:10px;overflow:hidden;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,0.2);margin-bottom:14px;position:relative;z-index:1;">
+      <img src="/logo.png" alt="Kine House" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
     </div>
     <div class="hero-name">Kine House</div>
     <div class="hero-mp">Centro de Kinesiología y Fisioterapia · Readaptación Física</div>
@@ -140,13 +116,15 @@
     </div>
   </div>
   <div class="content">
+    <!-- STEP 0: elegir profesional -->
     <div id="step0" class="step active">
       <p class="section-label">Elegí tu profesional</p>
-      <div id="profesionales-grid" style="display:flex; flex-direction:column; gap:12px; margin-bottom:1.5rem;"></div>
+      <div id="profesionales-grid" style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.5rem;"></div>
     </div>
+    <!-- STEP 1: elegir día y horario -->
     <div id="step1" class="step">
       <button class="btn btn-ghost" onclick="volverAProfesionales()">← Volver</button>
-      <div id="prof-seleccionado-badge" style="display:flex; align-items:center; gap:10px; background:var(--green-50); border:0.5px solid var(--green-100); border-radius:12px; padding:10px 14px; margin-bottom:1.25rem;">
+      <div id="prof-seleccionado-badge" style="display:flex;align-items:center;gap:10px;background:var(--green-50);border:0.5px solid var(--green-100);border-radius:12px;padding:10px 14px;margin-bottom:1.25rem;">
         <div id="prof-badge-avatar" style="width:36px;height:36px;border-radius:50%;background:#2D4A3E;display:flex;align-items:center;justify-content:center;font-weight:500;color:white;font-size:13px;flex-shrink:0;"></div>
         <div>
           <div id="prof-badge-nombre" style="font-size:14px;font-weight:500;color:var(--green-900);"></div>
@@ -171,12 +149,10 @@
           <div class="slots-grid" id="slots-tarde"></div>
         </div>
       </div>
-      <div id="carrito-container" style="display:none; margin-top:1.5rem;">
+      <div id="carrito-container" style="display:none;margin-top:1.5rem;">
         <p class="section-label">Turnos seleccionados <span id="carrito-count" style="color:#1D9E75;"></span></p>
-        <div id="carrito-lista" style="display:flex; flex-direction:column; gap:8px; margin-bottom:1rem;"></div>
-        <button class="btn" style="background:none; border:0.5px dashed #9FE1CB; border-radius:12px; padding:10px; font-size:13px; color:#1D9E75; width:100%; cursor:pointer;" onclick="mostrarSlotsParaAgregar()" id="btn-agregar-mas">
-          + Agregar otro turno
-        </button>
+        <div id="carrito-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;"></div>
+        <button class="btn" style="background:none;border:0.5px dashed #9FE1CB;border-radius:12px;padding:10px;font-size:13px;color:#1D9E75;width:100%;cursor:pointer;" onclick="mostrarSlotsParaAgregar()" id="btn-agregar-mas">+ Agregar otro turno</button>
       </div>
       <div style="margin-top:1.5rem;">
         <button class="btn btn-primary" id="btn-continuar" onclick="goToStep2()" disabled>
@@ -184,14 +160,15 @@
         </button>
       </div>
     </div>
+    <!-- STEP 2: datos personales -->
     <div id="step2" class="step">
       <button class="btn btn-ghost" onclick="goToStep1()">← Volver</button>
       <div class="resumen-box" id="resumen-preview"></div>
       <p class="section-label">Tus datos</p>
       <div class="info-note">📧 Recibirás una invitación en tu email con recordatorio 30 minutos antes.</div>
-      <div id="datos-guardados" style="display:none; align-items:center; gap:8px; background:#E1F5EE; border:0.5px solid #9FE1CB; border-radius:8px; padding:10px 12px; margin-bottom:1rem; font-size:13px; color:#0F6E56;">
+      <div id="datos-guardados" style="display:none;align-items:center;gap:8px;background:#E1F5EE;border:0.5px solid #9FE1CB;border-radius:8px;padding:10px 12px;margin-bottom:1rem;font-size:13px;color:#0F6E56;">
         <span>✅ Tus datos fueron completados automáticamente</span>
-        <button onclick="clearSavedData()" style="margin-left:auto; background:none; border:none; font-size:12px; color:#0F6E56; cursor:pointer; text-decoration:underline;">Cambiar</button>
+        <button onclick="clearSavedData()" style="margin-left:auto;background:none;border:none;font-size:12px;color:#0F6E56;cursor:pointer;text-decoration:underline;">Cambiar</button>
       </div>
       <div class="form-group"><label>Nombre completo</label><input type="text" id="inp-nombre" placeholder="Ej: María López" oninput="validateForm()"></div>
       <div class="form-group"><label>Teléfono</label><input type="tel" id="inp-telefono" placeholder="Ej: 387 123-4567" oninput="validateForm()"></div>
@@ -207,7 +184,7 @@
       <div class="acomp-form" id="acomp-form">
         <p style="font-size:13px;font-weight:500;color:var(--gray-500);margin-bottom:12px;">Datos del acompañante</p>
         <div class="form-group"><label>Nombre completo</label><input type="text" id="inp-acomp-nombre" placeholder="Ej: Juan López" oninput="validateForm()"></div>
-        <div class="form-group"><label>Teléfono <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></label><input type="tel" id="inp-acomp-tel" placeholder="Ej: 387 765-4321"></div>
+        <div class="form-group"><label>Teléfono (opcional)</label><input type="tel" id="inp-acomp-tel" placeholder="Ej: 387 765-4321"></div>
       </div>
       <div class="error-banner" id="error-banner"></div>
       <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarTurno()" disabled>
@@ -215,6 +192,7 @@
         <span class="btn-spinner">Confirmando...</span>
       </button>
     </div>
+    <!-- STEP 3: éxito -->
     <div id="step3" class="step">
       <div class="success-screen">
         <div class="success-circle">✅</div>
@@ -227,12 +205,10 @@
     </div>
   </div>
 </div>
-
 <script>
+  // ── ESTADO ────────────────────────────────────────────────────────────────
   const API_BASE = '';
-  const CAPACIDAD_MANANA = 4;
-  const CAPACIDAD_TARDE  = 2;
-
+  const MAX_TURNOS = 5;
   const reservasLocales = {};
   let cuposDelDia = {};
   let conAcomp = false;
@@ -241,17 +217,38 @@
   let selectedSlot = null;
   let selectedCap = null;
   let carrito = [];
-  const MAX_TURNOS = 5;
   let profesionalActual = null;
 
+  // ── UTILIDADES ────────────────────────────────────────────────────────────
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function getKey(d, s) { return d + '_' + s; }
+  function getCuposUsados(fecha, slot) {
+    return (reservasLocales[getKey(fecha, slot)] || 0) + (cuposDelDia[slot] || 0);
+  }
+  function hoyArgentina() {
+    const now = new Date();
+    const arg = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    return arg.toISOString().substring(0, 10);
+  }
+  function formatDate(d) {
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function formatDateDisplay(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const days = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return days[d.getDay()] + ' ' + d.getDate() + ' de ' + months[d.getMonth()];
+  }
+
+  // ── HORARIOS ──────────────────────────────────────────────────────────────
   function getSlotsManana(dateStr) {
     const profId = profesionalActual ? profesionalActual.id : 'julian';
     const dow = new Date(dateStr + 'T12:00:00').getDay();
-    // Mauro: lun-vie 09:00 a 11:30, 3 cupos
-    if (profId === 'mauro' && [1,2,3,4,5].includes(dow)) {
+    // Mauro: lun-vie 09:00 a 11:30, cada 30 min
+    if (profId === 'mauro' && dow >= 1 && dow <= 5) {
       const slots = [];
-      for (let m = 9*60; m <= 11*60+30; m += 30)
-        slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+      for (let m = 9 * 60; m <= 11 * 60 + 30; m += 30)
+        slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
       return slots;
     }
     return [];
@@ -262,52 +259,77 @@
     const dow = new Date(dateStr + 'T12:00:00').getDay();
     const slots = [];
     if (profId === 'mauro') {
-      // Lun-Jue: 15:00 a 18:30 | Vie: 15:00 a 17:30
-      const endMin = dow === 5 ? 18*60 : 19*60;
-      for (let m = 15*60; m < endMin; m += 30)
-        slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+      // Lun-Jue: 15:00-18:30 | Vie: 15:00-17:30
+      const endMin = dow === 5 ? 18 * 60 : 19 * 60;
+      for (let m = 15 * 60; m < endMin; m += 30)
+        slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     } else if (profId === 'esteban') {
-      // Lun-Vie: 15:00 a 19:00
-      for (let m = 15*60; m < 19*60+30; m += 30)
-        slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+      // Lun-Vie: 15:00-19:00
+      for (let m = 15 * 60; m < 19 * 60 + 30; m += 30)
+        slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     } else {
-      // Julian: Lun-Vie 16:30 a 19:00
-      for (let m = 16*60+30; m < 19*60+30; m += 30)
-        slots.push(pad(Math.floor(m/60)) + ':' + pad(m%60));
+      // Julian: Lun-Vie 16:30-19:00
+      for (let m = 16 * 60 + 30; m < 19 * 60 + 30; m += 30)
+        slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     }
     return slots;
   }
 
   function getCapacidadSlot(slot, dateStr) {
-    const profId = profesionalActual ? profesionalActual.id : 'julian';
     const manana = getSlotsManana(dateStr);
+    const profId = profesionalActual ? profesionalActual.id : 'julian';
     if (profId === 'mauro' && manana.includes(slot)) return 3;
     return 2;
   }
 
+  function isSlotPast(dateStr, slot) {
+    const slotTime = new Date(dateStr + 'T' + slot + ':00-03:00');
+    return slotTime.getTime() - Date.now() <= 30 * 60 * 1000;
+  }
+
+  // ── SEMANA ────────────────────────────────────────────────────────────────
   function getWeekDates(offset) {
     const today = new Date();
     const dow = today.getDay();
     const monday = new Date(today);
     monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
-    return Array.from({length:5}, (_, i) => {
+    return Array.from({length: 5}, (_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       return d;
     });
   }
 
-  function formatDate(d) {
-    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  function renderWeek() {
+    const days = getWeekDates(currentWeekOffset);
+    const todayStr = hoyArgentina();
+    const names = ['Lun','Mar','Mié','Jue','Vie'];
+    const grid = document.getElementById('days-grid');
+    grid.innerHTML = '';
+    days.forEach((d, i) => {
+      const ds = formatDate(d);
+      const isPast = ds < todayStr;
+      const div = document.createElement('div');
+      div.className = 'day-card' + (isPast ? ' past' : '') + (ds === selectedDate ? ' selected' : '');
+      div.innerHTML = '<div class="day-name">' + names[i] + '</div><div class="day-number">' + d.getDate() + '</div>';
+      if (!isPast) div.onclick = () => selectDay(ds);
+      grid.appendChild(div);
+    });
+    const first = days[0], last = days[4];
+    const mo = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    document.getElementById('week-label').textContent =
+      first.getDate() + ' ' + mo[first.getMonth()] + ' – ' + last.getDate() + ' ' + mo[last.getMonth()];
   }
 
-  function formatDateDisplay(dateStr) {
-    const d = new Date(dateStr + 'T12:00:00');
-    const days = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-    const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-    return days[d.getDay()] + ' ' + d.getDate() + ' de ' + months[d.getMonth()];
+  function changeWeek(dir) {
+    currentWeekOffset = Math.max(0, currentWeekOffset + dir);
+    selectedDate = null; selectedSlot = null; selectedCap = null;
+    document.getElementById('slots-container').style.display = 'none';
+    document.getElementById('btn-continuar').disabled = true;
+    renderWeek();
   }
 
+  // ── PROFESIONALES ─────────────────────────────────────────────────────────
   async function cargarProfesionales() {
     try {
       const r = await fetch('/api/profesionales');
@@ -316,7 +338,7 @@
       grid.innerHTML = '';
       data.profesionales.forEach(p => {
         const palabras = p.nombre.replace('Lic. ', '').split(' ');
-        const iniciales = palabras.length >= 2 ? palabras[0][0] + palabras[palabras.length-1][0] : palabras[0].substring(0,2);
+        const iniciales = palabras.length >= 2 ? palabras[0][0] + palabras[palabras.length - 1][0] : palabras[0].substring(0, 2);
         const div = document.createElement('div');
         div.className = 'prof-card';
         div.innerHTML =
@@ -332,14 +354,13 @@
   function seleccionarProfesional(prof) {
     profesionalActual = prof;
     const palabras = prof.nombre.replace('Lic. ', '').split(' ');
-    const iniciales = palabras.length >= 2 ? palabras[0][0] + palabras[palabras.length-1][0] : palabras[0].substring(0,2);
+    const iniciales = palabras.length >= 2 ? palabras[0][0] + palabras[palabras.length - 1][0] : palabras[0].substring(0, 2);
     document.getElementById('prof-badge-avatar').textContent = iniciales;
     document.getElementById('prof-badge-nombre').textContent = prof.nombre;
     document.getElementById('prof-badge-mp').textContent = 'M.P.: ' + prof.mp;
     document.getElementById('step0').classList.remove('active');
     document.getElementById('step1').classList.add('active');
-    carrito = [];
-    selectedDate = null; selectedSlot = null;
+    carrito = []; selectedDate = null; selectedSlot = null;
     document.getElementById('slots-container').style.display = 'none';
     document.getElementById('carrito-container').style.display = 'none';
     document.getElementById('btn-continuar').disabled = true;
@@ -352,33 +373,7 @@
     carrito = []; selectedDate = null; selectedSlot = null;
   }
 
-  function renderWeek() {
-    const days = getWeekDates(currentWeekOffset);
-    // Comparar solo por fecha (sin horas) usando la fecha de Argentina
-    const todayStr = (() => {
-      const now = new Date();
-      // Ajustar a Argentina (UTC-3)
-      const arg = new Date(now.getTime() - 3 * 60 * 60 * 1000);
-      return arg.toISOString().substring(0, 10);
-    })();
-    const names = ['Lun','Mar','Mié','Jue','Vie'];
-    const grid = document.getElementById('days-grid');
-    grid.innerHTML = '';
-    days.forEach((d, i) => {
-      const ds = formatDate(d);
-      const isPast = ds < todayStr;
-      const div = document.createElement('div');
-      div.className = 'day-card' + (isPast ? ' past' : '') + (ds === selectedDate ? ' selected' : '');
-      div.innerHTML = `<div class="day-name">${names[i]}</div><div class="day-number">${d.getDate()}</div>`;
-      if (!isPast) div.onclick = () => selectDay(ds);
-      grid.appendChild(div);
-    });
-    const first = days[0], last = days[4];
-    const mo = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    document.getElementById('week-label').textContent =
-      first.getDate() + ' ' + mo[first.getMonth()] + ' – ' + last.getDate() + ' ' + mo[last.getMonth()];
-  }
-
+  // ── SLOTS ─────────────────────────────────────────────────────────────────
   async function selectDay(dateStr) {
     selectedDate = dateStr;
     selectedSlot = null; selectedCap = null;
@@ -388,7 +383,7 @@
     cuposDelDia = {};
     try {
       const profId = profesionalActual ? profesionalActual.id : 'julian';
-      const r = await fetch(`${API_BASE}/api/cupos?fecha=${dateStr}&profesional=${profId}`);
+      const r = await fetch(API_BASE + '/api/cupos?fecha=' + dateStr + '&profesional=' + profId);
       const data = await r.json();
       cuposDelDia = data.cupos || {};
       if (data.diaBloqueado) {
@@ -407,21 +402,13 @@
     renderSlotGroup('slots-tarde', selectedDate, getSlotsTarde(selectedDate));
   }
 
-  function isSlotPast(dateStr, slot) {
-    const slotTime = new Date(dateStr + 'T' + slot + ':00-03:00');
-    return slotTime.getTime() - Date.now() <= 30 * 60 * 1000;
-  }
-
   function renderSlotGroup(id, dateStr, slots) {
     const c = document.getElementById(id);
     c.innerHTML = '';
-    const profId = profesionalActual ? profesionalActual.id : 'julian';
-
     if (!slots.length) {
       c.innerHTML = '<span style="font-size:13px;color:var(--gray-500)">Sin horarios</span>';
       return;
     }
-
     slots.forEach(slot => {
       const cap = getCapacidadSlot(slot, dateStr);
       const usado = getCuposUsados(dateStr, slot);
@@ -432,11 +419,11 @@
       const btn = document.createElement('button');
       btn.className = 'slot-btn' + (isFull && !enCarrito ? ' full' : '') + (enCarrito ? ' selected' : '');
       let tag = '';
-      if (isPast) tag = `<span class="cupos-tag" style="color:var(--gray-500)">finalizado</span>`;
+      if (isPast) tag = '<span class="cupos-tag" style="color:var(--gray-500)">finalizado</span>';
       else if (!isFull) tag = disp === 1
-        ? `<span class="cupos-tag last">último cupo</span>`
-        : `<span class="cupos-tag ok">${disp} cupos</span>`;
-      btn.innerHTML = `<div>${slot}</div>${tag}`;
+        ? '<span class="cupos-tag last">último cupo</span>'
+        : '<span class="cupos-tag ok">' + disp + ' cupos</span>';
+      btn.innerHTML = '<div>' + slot + '</div>' + tag;
       if (!isFull) btn.onclick = () => selectSlot(slot, cap);
       c.appendChild(btn);
     });
@@ -485,44 +472,7 @@
     btnAgregar.style.display = carrito.length >= MAX_TURNOS ? 'none' : 'block';
   }
 
-  function changeWeek(dir) {
-    currentWeekOffset = Math.max(0, currentWeekOffset + dir);
-    selectedDate = null; selectedSlot = null; selectedCap = null;
-    document.getElementById('slots-container').style.display = 'none';
-    document.getElementById('btn-continuar').disabled = true;
-    renderWeek();
-  }
-
-  function loadSavedData() {
-    try {
-      const saved = JSON.parse(localStorage.getItem('gaffet_paciente') || '{}');
-      if (saved.nombre) document.getElementById('inp-nombre').value = saved.nombre;
-      if (saved.telefono) document.getElementById('inp-telefono').value = saved.telefono;
-      if (saved.email) document.getElementById('inp-email').value = saved.email;
-      if (saved.nombre || saved.email) {
-        const badge = document.getElementById('datos-guardados');
-        if (badge) badge.style.display = 'flex';
-      }
-    } catch(e) {}
-  }
-
-  function savePatientData() {
-    try {
-      const data = { nombre: document.getElementById('inp-nombre').value.trim(), telefono: document.getElementById('inp-telefono').value.trim(), email: document.getElementById('inp-email').value.trim() };
-      if (data.nombre && data.email) localStorage.setItem('gaffet_paciente', JSON.stringify(data));
-    } catch(e) {}
-  }
-
-  function clearSavedData() {
-    try {
-      localStorage.removeItem('gaffet_paciente');
-      ['inp-nombre','inp-telefono','inp-email'].forEach(id => document.getElementById(id).value = '');
-      const badge = document.getElementById('datos-guardados');
-      if (badge) badge.style.display = 'none';
-      validateForm();
-    } catch(e) {}
-  }
-
+  // ── STEP 2 ────────────────────────────────────────────────────────────────
   function goToStep2() {
     conAcomp = false;
     document.getElementById('acomp-toggle').classList.remove('active');
@@ -579,6 +529,33 @@
     document.getElementById('btn-confirmar').disabled = !ok;
   }
 
+  function loadSavedData() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('gaffet_paciente') || '{}');
+      if (saved.nombre) document.getElementById('inp-nombre').value = saved.nombre;
+      if (saved.telefono) document.getElementById('inp-telefono').value = saved.telefono;
+      if (saved.email) document.getElementById('inp-email').value = saved.email;
+      if (saved.nombre || saved.email) document.getElementById('datos-guardados').style.display = 'flex';
+    } catch(e) {}
+  }
+
+  function savePatientData() {
+    try {
+      const data = { nombre: document.getElementById('inp-nombre').value.trim(), telefono: document.getElementById('inp-telefono').value.trim(), email: document.getElementById('inp-email').value.trim() };
+      if (data.nombre && data.email) localStorage.setItem('gaffet_paciente', JSON.stringify(data));
+    } catch(e) {}
+  }
+
+  function clearSavedData() {
+    try {
+      localStorage.removeItem('gaffet_paciente');
+      ['inp-nombre','inp-telefono','inp-email'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('datos-guardados').style.display = 'none';
+      validateForm();
+    } catch(e) {}
+  }
+
+  // ── CONFIRMAR ─────────────────────────────────────────────────────────────
   async function confirmarTurno() {
     savePatientData();
     const btn = document.getElementById('btn-confirmar');
@@ -590,7 +567,7 @@
     const acomp    = conAcomp ? document.getElementById('inp-acomp-nombre').value.trim() : null;
     try {
       for (const turno of carrito) {
-        const res = await fetch(`${API_BASE}/api/reservar`, {
+        const res = await fetch(API_BASE + '/api/reservar', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nombre, email, telefono, fecha: turno.fecha, hora: turno.slot, acompanante: acomp, profesional: profesionalActual ? profesionalActual.id : 'julian' }),
         });
@@ -630,6 +607,7 @@
     cargarProfesionales();
   }
 
+  // ── INIT ──────────────────────────────────────────────────────────────────
   cargarProfesionales();
 </script>
 </body>
