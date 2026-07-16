@@ -259,17 +259,17 @@
     const dow = new Date(dateStr + 'T12:00:00').getDay();
     const slots = [];
     if (profId === 'mauro') {
-      // Lun-Jue: 15:00-18:30 | Vie: 15:00-17:30
-      const endMin = dow === 5 ? 18 * 60 : 19 * 60;
+      // Lun-Jue: último slot 19:00 | Vie: último slot 18:00
+      const endMin = dow === 5 ? 18 * 60 + 30 : 19 * 60 + 30;
       for (let m = 15 * 60; m < endMin; m += 30)
         slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     } else if (profId === 'esteban') {
-      // Lun-Vie: 15:00-19:00
-      for (let m = 15 * 60; m < 19 * 60 + 30; m += 30)
+      // Lun-Vie: último slot 19:30
+      for (let m = 15 * 60; m < 20 * 60; m += 30)
         slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     } else {
-      // Julian: Lun-Vie 16:30-19:00
-      for (let m = 16 * 60 + 30; m < 19 * 60 + 30; m += 30)
+      // Julian: Lun-Vie último slot 19:30
+      for (let m = 16 * 60 + 30; m < 20 * 60; m += 30)
         slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     }
     return slots;
