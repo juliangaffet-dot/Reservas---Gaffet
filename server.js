@@ -3,15 +3,14 @@ const { google } = require('googleapis');
 const cors = require('cors');
 const path = require('path');
 const Database = require('better-sqlite3');
+const crypto = require('crypto');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── BASE DE DATOS SQLite ─────────────────────────────────────────────────────
-// Se guarda en /data (Volume persistente de Railway) para que sobreviva a cada deploy.
-// Si /data no existe (ej. corriendo local), cae de nuevo a la carpeta del proyecto.
+// ─── BASE DE DATOS ────────────────────────────────────────────────────────────
 const fs = require('fs');
 const DB_DIR = fs.existsSync('/data') ? '/data' : __dirname;
 const db = new Database(path.join(DB_DIR, 'asistencia.db'));
@@ -29,6 +28,7 @@ db.exec(`
     hora TEXT NOT NULL,
     estado TEXT DEFAULT 'pendiente',
     paciente_id INTEGER,
+    cancel_token TEXT,
     creado_en TEXT DEFAULT (datetime('now','-3 hours'))
   );
 
@@ -48,11 +48,11 @@ db.exec(`
   );
 `);
 
-// Migración suave: agregar columnas si la DB ya existía sin ellas
+// Migraciones suaves
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN email TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN telefono TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN sin_completar INTEGER NOT NULL DEFAULT 1`); } catch(e) {}
-// ─────────────────────────────────────────────────────────────────────────────
+try { db.exec(`ALTER TABLE turnos ADD COLUMN cancel_token TEXT`); } catch(e) {}
 
 // ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
 const CLIENT_ID      = process.env.GOOGLE_CLIENT_ID;
@@ -60,6 +60,7 @@ const CLIENT_SECRET  = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI   = process.env.REDIRECT_URI || 'http://localhost:3000/auth/callback';
 const REFRESH_TOKEN  = process.env.GOOGLE_REFRESH_TOKEN;
 const PANEL_PASSWORD = process.env.PANEL_PASSWORD || 'kinehouse2025';
+const BASE_URL       = process.env.BASE_URL || 'https://reservas-kinehouse.up.railway.app';
 
 const PROFESIONALES = {
   julian:  { nombre: 'Lic. Julián Gaffet',  mp: '1321', calendarId: 'primary' },
@@ -69,33 +70,27 @@ const PROFESIONALES = {
 
 const PALABRAS_BLOQUEO = ['bloqueado', 'no disponible', 'feriado', 'cerrado', 'ocupado', 'no atiende'];
 
-// ─── AUTO-REGISTRO DE PACIENTES ──────────────────────────────────────────────
-// Si el paciente no existe (por nombre+profesional), lo crea con valores por defecto.
-// Julián completa después obra social y sesiones reales desde el panel.
+// ─── OAUTH ────────────────────────────────────────────────────────────────────
+const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
 function obtenerOCrearPaciente(nombre, profesional, email, telefono) {
   const existente = db.prepare(`
     SELECT id FROM pacientes WHERE LOWER(nombre) = LOWER(?) AND profesional = ? AND activo = 1 LIMIT 1
   `).get(nombre, profesional);
   if (existente) {
-    // Si ya existe pero no tenía email/telefono, completarlos
     if (email || telefono) {
       db.prepare(`UPDATE pacientes SET email = COALESCE(NULLIF(email,''), ?), telefono = COALESCE(NULLIF(telefono,''), ?) WHERE id = ?`).run(email || '', telefono || '', existente.id);
     }
     return existente.id;
   }
-
   const result = db.prepare(`
     INSERT INTO pacientes (nombre, obra_social, plan, sesiones_total, sesiones_usadas, profesional, email, telefono, sin_completar)
     VALUES (?, '', '', 10, 0, ?, ?, ?, 1)
   `).run(nombre, profesional, email || '', telefono || '');
   return result.lastInsertRowid;
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
-const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─── JOB AUTOMÁTICO 21hs ─────────────────────────────────────────────────────
 function getHoraArgentina() {
   const arg = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
   return { hora: arg.getUTCHours(), minuto: arg.getUTCMinutes() };
@@ -105,6 +100,102 @@ function getFechaArgentina() {
   return arg.toISOString().substring(0, 10);
 }
 
+function formatFechaDisplay(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const days = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return days[d.getDay()] + ' ' + d.getDate() + ' de ' + months[d.getMonth()];
+}
+
+// ─── ENVIAR EMAIL VIA GMAIL API ───────────────────────────────────────────────
+async function enviarEmailConfirmacion({ nombre, email, fecha, hora, profesional, cancelToken, acompanante }) {
+  try {
+    oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+    const prof = PROFESIONALES[profesional] || PROFESIONALES.julian;
+    const fechaDisplay = formatFechaDisplay(fecha);
+    const cancelUrl = `${BASE_URL}/cancelar?token=${cancelToken}`;
+
+    const htmlBody = `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:30px 0;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <!-- Header -->
+        <tr><td style="background:#2D4A3E;padding:28px 32px;">
+          <div style="font-size:22px;font-weight:700;color:white;letter-spacing:-0.5px;">Kine House</div>
+          <div style="font-size:13px;color:#9FE1CB;margin-top:4px;">Centro de Kinesiología y Fisioterapia</div>
+        </td></tr>
+        <!-- Body -->
+        <tr><td style="padding:32px;">
+          <p style="font-size:16px;color:#1C1C1E;margin:0 0 8px;">Hola <strong>${nombre}</strong> 👋</p>
+          <p style="font-size:15px;color:#6b6b5a;margin:0 0 24px;">Tu turno quedó confirmado. Acá están los detalles:</p>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f7f4;border-radius:10px;padding:20px;margin-bottom:24px;">
+            <tr><td style="padding:6px 0;">
+              <span style="font-size:13px;color:#6b6b5a;display:block;">📅 Fecha</span>
+              <span style="font-size:15px;font-weight:600;color:#1C1C1E;text-transform:capitalize;">${fechaDisplay}</span>
+            </td></tr>
+            <tr><td style="padding:6px 0;border-top:1px solid #d4ead9;">
+              <span style="font-size:13px;color:#6b6b5a;display:block;">🕐 Horario</span>
+              <span style="font-size:15px;font-weight:600;color:#1C1C1E;">${hora} hs</span>
+            </td></tr>
+            <tr><td style="padding:6px 0;border-top:1px solid #d4ead9;">
+              <span style="font-size:13px;color:#6b6b5a;display:block;">👨‍⚕️ Profesional</span>
+              <span style="font-size:15px;font-weight:600;color:#1C1C1E;">${prof.nombre}</span>
+            </td></tr>
+            ${acompanante ? `<tr><td style="padding:6px 0;border-top:1px solid #d4ead9;">
+              <span style="font-size:13px;color:#6b6b5a;display:block;">👥 Acompañante</span>
+              <span style="font-size:15px;font-weight:600;color:#1C1C1E;">${acompanante}</span>
+            </td></tr>` : ''}
+            <tr><td style="padding:6px 0;border-top:1px solid #d4ead9;">
+              <span style="font-size:13px;color:#6b6b5a;display:block;">📍 Dirección</span>
+              <span style="font-size:15px;font-weight:600;color:#1C1C1E;">Cmte. Piedrabuena 820, Salta</span>
+            </td></tr>
+          </table>
+
+          <p style="font-size:14px;color:#6b6b5a;margin:0 0 20px;">Si necesitás cancelar el turno, hacé clic en el botón de abajo. Por favor cancelá con al menos 2 horas de anticipación.</p>
+
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td align="center">
+              <a href="${cancelUrl}" style="display:inline-block;background:#A32D2D;color:white;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;">Cancelar turno</a>
+            </td></tr>
+          </table>
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="background:#f8f8f8;padding:16px 32px;border-top:1px solid #eee;">
+          <p style="font-size:12px;color:#aaa;margin:0;text-align:center;">Kine House · Cmte. Piedrabuena 820, Salta · Este email fue enviado automáticamente</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    const subject = `✅ Turno confirmado — ${fechaDisplay} ${hora} hs`;
+    const message = [
+      `From: Kine House <juliangaffet@gmail.com>`,
+      `To: ${email}`,
+      `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+      `MIME-Version: 1.0`,
+      `Content-Type: text/html; charset=UTF-8`,
+      ``,
+      htmlBody
+    ].join('\n');
+
+    const encoded = Buffer.from(message).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    await gmail.users.messages.send({ userId: 'me', resource: { raw: encoded } });
+    console.log(`📧 Email enviado a ${email}`);
+  } catch(err) {
+    console.error('Error enviando email:', err.message);
+    // No fallar la reserva si el email falla
+  }
+}
+
+// ─── JOB AUTOMÁTICO 21hs ─────────────────────────────────────────────────────
 function marcarAsistenciaDelDia() {
   const hoy = getFechaArgentina();
   const pendientes = db.prepare(`SELECT * FROM turnos WHERE fecha = ? AND estado = 'pendiente'`).all(hoy);
@@ -122,11 +213,10 @@ setInterval(() => {
   const { hora, minuto } = getHoraArgentina();
   if (hora === 21 && minuto === 0) marcarAsistenciaDelDia();
 }, 60 * 1000);
-// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── AUTH GOOGLE ──────────────────────────────────────────────────────────────
 app.get('/auth', (req, res) => {
-  const url = oauth2Client.generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: ['https://www.googleapis.com/auth/calendar'] });
+  const url = oauth2Client.generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/gmail.send'] });
   res.redirect(url);
 });
 app.get('/auth/callback', async (req, res) => {
@@ -134,7 +224,147 @@ app.get('/auth/callback', async (req, res) => {
   console.log('\n✅ REFRESH TOKEN:\n', tokens.refresh_token);
   res.send('<h2>✅ Autorización exitosa!</h2>');
 });
-// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── CANCELAR TURNO ───────────────────────────────────────────────────────────
+app.get('/cancelar', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.send(paginaCancelacion('error', 'Link inválido.'));
+
+  const turno = db.prepare(`SELECT * FROM turnos WHERE cancel_token = ?`).get(token);
+  if (!turno) return res.send(paginaCancelacion('error', 'Este link ya fue usado o no es válido.'));
+  if (turno.estado === 'cancelado') return res.send(paginaCancelacion('ya_cancelado', '', turno));
+  if (turno.estado === 'asistio') return res.send(paginaCancelacion('error', 'Este turno ya fue marcado como asistido y no puede cancelarse.'));
+
+  // Verificar que no sea menos de 2 horas antes
+  const slotTime = new Date(turno.fecha + 'T' + turno.hora + ':00-03:00');
+  if (slotTime - new Date() < 2 * 60 * 60 * 1000) {
+    return res.send(paginaCancelacion('error', 'No se puede cancelar con menos de 2 horas de anticipación. Comunicate directamente con el centro.'));
+  }
+
+  // Mostrar página de confirmación de cancelación
+  res.send(paginaConfirmarCancelacion(token, turno));
+});
+
+app.post('/cancelar', async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ ok: false, error: 'Token inválido' });
+
+  const turno = db.prepare(`SELECT * FROM turnos WHERE cancel_token = ?`).get(token);
+  if (!turno) return res.status(404).json({ ok: false, error: 'Turno no encontrado' });
+  if (turno.estado === 'cancelado') return res.json({ ok: true, mensaje: 'Ya estaba cancelado' });
+
+  try {
+    // Cancelar en Google Calendar
+    oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    const prof = PROFESIONALES[turno.profesional] || PROFESIONALES.julian;
+
+    // Buscar el evento en el calendario
+    const fechaStr = turno.fecha;
+    const response = await calendar.events.list({
+      calendarId: prof.calendarId,
+      timeMin: `${fechaStr}T00:00:00-03:00`,
+      timeMax: `${fechaStr}T23:59:59-03:00`,
+      singleEvents: true,
+    });
+
+    const eventos = response.data.items || [];
+    const evento = eventos.find(ev => {
+      const horaEv = ev.start?.dateTime?.substring(11, 16);
+      const titulo = ev.summary || '';
+      return horaEv === turno.hora && titulo.toLowerCase().includes(turno.nombre.toLowerCase());
+    });
+
+    if (evento) {
+      await calendar.events.delete({ calendarId: prof.calendarId, eventId: evento.id, sendUpdates: 'all' });
+      console.log(`🗑 Evento cancelado en Google Calendar: ${evento.id}`);
+    }
+
+    // Actualizar en DB
+    db.prepare(`UPDATE turnos SET estado = 'cancelado' WHERE cancel_token = ?`).run(token);
+
+    res.json({ ok: true });
+  } catch(err) {
+    console.error('Error cancelando:', err.message);
+    res.status(500).json({ ok: false, error: 'No se pudo cancelar. Comunicate con el centro.' });
+  }
+});
+
+function paginaCancelacion(tipo, mensaje, turno) {
+  const iconos = { error: '❌', ya_cancelado: 'ℹ️', exito: '✅' };
+  const titulos = { error: 'No se pudo cancelar', ya_cancelado: 'Turno ya cancelado', exito: '¡Turno cancelado!' };
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Kine House</title>
+  <style>body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+  .card{background:white;border-radius:16px;padding:40px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
+  .icon{font-size:48px;margin-bottom:16px;}
+  h2{color:#1C1C1E;font-size:20px;margin:0 0 8px;}
+  p{color:#6b6b5a;font-size:15px;margin:0 0 24px;}
+  a{display:inline-block;background:#2D4A3E;color:white;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;}
+  </style></head><body><div class="card">
+  <div class="icon">${iconos[tipo] || '❌'}</div>
+  <h2>${titulos[tipo] || 'Error'}</h2>
+  <p>${mensaje || (turno ? `Tu turno del ${formatFechaDisplay(turno.fecha)} a las ${turno.hora} hs ya estaba cancelado.` : '')}</p>
+  <a href="/">Reservar nuevo turno</a>
+  </div></body></html>`;
+}
+
+function paginaConfirmarCancelacion(token, turno) {
+  const prof = PROFESIONALES[turno.profesional] || PROFESIONALES.julian;
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cancelar turno — Kine House</title>
+  <style>body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+  .card{background:white;border-radius:16px;padding:40px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
+  .icon{font-size:48px;margin-bottom:16px;}
+  h2{color:#1C1C1E;font-size:20px;margin:0 0 8px;}
+  p{color:#6b6b5a;font-size:15px;margin:0 0 20px;}
+  .detalle{background:#f8f8f8;border-radius:10px;padding:16px;margin-bottom:24px;text-align:left;}
+  .detalle div{font-size:14px;color:#1C1C1E;padding:4px 0;}
+  .detalle span{color:#6b6b5a;font-size:12px;display:block;}
+  .btn-cancel{background:#A32D2D;color:white;border:none;padding:13px 28px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;width:100%;margin-bottom:10px;}
+  .btn-cancel:hover{background:#8a2424;}
+  .btn-volver{background:none;color:#6b6b5a;border:1px solid #ddd;padding:11px 28px;border-radius:8px;font-size:14px;cursor:pointer;width:100%;}
+  .loading{display:none;color:#6b6b5a;font-size:14px;margin-top:12px;}
+  </style></head><body><div class="card">
+  <div class="icon">⚠️</div>
+  <h2>¿Cancelar este turno?</h2>
+  <p>Esta acción no se puede deshacer.</p>
+  <div class="detalle">
+    <div><span>Paciente</span>${turno.nombre}${turno.acompanante ? ' + ' + turno.acompanante : ''}</div>
+    <div><span>Fecha</span>${formatFechaDisplay(turno.fecha)}</div>
+    <div><span>Horario</span>${turno.hora} hs</div>
+    <div><span>Profesional</span>${prof.nombre}</div>
+  </div>
+  <button class="btn-cancel" onclick="cancelar()">Sí, cancelar turno</button>
+  <button class="btn-volver" onclick="window.location='/'">No, volver</button>
+  <div class="loading" id="loading">Cancelando...</div>
+  </div>
+  <script>
+  async function cancelar() {
+    document.querySelector('.btn-cancel').disabled = true;
+    document.querySelector('.btn-volver').disabled = true;
+    document.getElementById('loading').style.display = 'block';
+    try {
+      const r = await fetch('/cancelar', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({token:'${token}'}) });
+      const d = await r.json();
+      if (d.ok) {
+        document.querySelector('.card').innerHTML = '<div class="icon">✅</div><h2>Turno cancelado</h2><p>Tu turno fue cancelado correctamente. Si querés reservar otro, hacé clic abajo.</p><a href="/" style="display:inline-block;background:#2D4A3E;color:white;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;">Reservar nuevo turno</a>';
+      } else {
+        alert(d.error || 'No se pudo cancelar');
+        document.querySelector('.btn-cancel').disabled = false;
+        document.querySelector('.btn-volver').disabled = false;
+        document.getElementById('loading').style.display = 'none';
+      }
+    } catch(e) {
+      alert('Error de conexión. Intentá de nuevo.');
+      document.querySelector('.btn-cancel').disabled = false;
+      document.querySelector('.btn-volver').disabled = false;
+      document.getElementById('loading').style.display = 'none';
+    }
+  }
+  </script>
+  </body></html>`;
+}
 
 // ─── RESERVAR ─────────────────────────────────────────────────────────────────
 app.post('/api/reservar', async (req, res) => {
@@ -170,13 +400,17 @@ app.post('/api/reservar', async (req, res) => {
       sendNotifications: true,
     });
 
+    const cancelToken = crypto.randomBytes(24).toString('hex');
     const pacienteId = obtenerOCrearPaciente(nombre, profId, email, telefono);
-    db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?)`).run(nombre, email||'', telefono||'', acompanante||'', profId, fecha, hora, pacienteId);
+    db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id, cancel_token) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, ?)`).run(nombre, email||'', telefono||'', acompanante||'', profId, fecha, hora, pacienteId, cancelToken);
 
     if (acompanante) {
       const pacAcompId = obtenerOCrearPaciente(acompanante, profId, '', '');
       db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id) VALUES (?, '', '', '', ?, ?, ?, 'pendiente', ?)`).run(acompanante, profId, fecha, hora, pacAcompId);
     }
+
+    // Enviar email de confirmación con link de cancelación
+    await enviarEmailConfirmacion({ nombre, email, fecha, hora, profesional: profId, cancelToken, acompanante });
 
     res.json({ ok: true, eventId: response.data.id });
   } catch (err) {
@@ -235,96 +469,36 @@ function authPanel(req, res, next) {
   next();
 }
 
-// ─── SINCRONIZAR CON GOOGLE CALENDAR ─────────────────────────────────────────
+// ─── SINCRONIZAR ─────────────────────────────────────────────────────────────
 app.post('/api/sincronizar', authPanel, async (req, res) => {
   try {
     const { fecha, profesional } = req.body;
     if (!fecha || !profesional) return res.status(400).json({ error: 'Faltan datos' });
-
-    // Si profesional es 'todos', sincronizar los tres
-    const profsASincronizar = profesional === 'todos'
-      ? Object.keys(PROFESIONALES)
-      : [profesional];
-
+    const profsASincronizar = profesional === 'todos' ? Object.keys(PROFESIONALES) : [profesional];
     oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-    let agregados = 0;
-    let eliminados = 0;
-
+    let agregados = 0, eliminados = 0;
     for (const profId of profsASincronizar) {
       const prof = PROFESIONALES[profId];
-
-      // 1. Obtener eventos reales del calendario
-      const response = await calendar.events.list({
-        calendarId: prof.calendarId,
-        timeMin: `${fecha}T00:00:00-03:00`,
-        timeMax: `${fecha}T23:59:59-03:00`,
-        singleEvents: true,
-        orderBy: 'startTime',
-      });
-
-      const eventos = (response.data.items || []).filter(ev => {
-        if (!ev.start?.dateTime) return false;
-        const titulo = (ev.summary || '').toLowerCase();
-        return !PALABRAS_BLOQUEO.some(p => titulo.includes(p));
-      });
-
-      // 2. Construir lista de nombres+horas reales del calendario
-      const eventosReales = eventos.map(ev => {
-        const titulo = ev.summary || '';
-        const hora = ev.start.dateTime.substring(11, 16);
-        // Extraer nombre: "Turno - Nombre Apellido" → "Nombre Apellido"
-        const nombre = titulo.replace(/^turno\s*[-–]\s*/i, '').trim();
-        return { nombre, hora };
-      });
-
-      // 3. Obtener turnos actuales en DB para ese día y profesional
+      const response = await calendar.events.list({ calendarId: prof.calendarId, timeMin: `${fecha}T00:00:00-03:00`, timeMax: `${fecha}T23:59:59-03:00`, singleEvents: true, orderBy: 'startTime' });
+      const eventos = (response.data.items || []).filter(ev => { if (!ev.start?.dateTime) return false; const titulo = (ev.summary || '').toLowerCase(); return !PALABRAS_BLOQUEO.some(p => titulo.includes(p)); });
+      const eventosReales = eventos.map(ev => ({ nombre: (ev.summary || '').replace(/^turno\s*[-–]\s*/i, '').trim(), hora: ev.start.dateTime.substring(11, 16) }));
       const turnosDB = db.prepare(`SELECT * FROM turnos WHERE fecha = ? AND profesional = ?`).all(fecha, profId);
-
-      // 4. Eliminar de DB los turnos que ya no están en el calendario
-      //    (solo los que están en estado 'pendiente' para no borrar asistencias ya marcadas)
       for (const turno of turnosDB) {
         if (turno.estado !== 'pendiente') continue;
-        const estaEnCalendario = eventosReales.some(ev =>
-          ev.hora === turno.hora &&
-          ev.nombre.toLowerCase() === turno.nombre.toLowerCase()
-        );
-        if (!estaEnCalendario) {
-          db.prepare(`DELETE FROM turnos WHERE id = ?`).run(turno.id);
-          eliminados++;
-        }
+        const estaEnCalendario = eventosReales.some(ev => ev.hora === turno.hora && ev.nombre.toLowerCase() === turno.nombre.toLowerCase());
+        if (!estaEnCalendario) { db.prepare(`DELETE FROM turnos WHERE id = ?`).run(turno.id); eliminados++; }
       }
-
-      // 5. Agregar a DB los eventos del calendario que no están en la DB
       for (const ev of eventosReales) {
-        // Si el nombre tiene " + " puede ser que tenga acompañante
-        const nombres = ev.nombre.includes(' + ')
-          ? ev.nombre.split(' + ').map(n => n.trim())
-          : [ev.nombre];
-
+        const nombres = ev.nombre.includes(' + ') ? ev.nombre.split(' + ').map(n => n.trim()) : [ev.nombre];
         for (const nombre of nombres) {
-          const yaExiste = db.prepare(`
-            SELECT id FROM turnos WHERE fecha = ? AND profesional = ? AND hora = ? AND LOWER(nombre) = LOWER(?)
-          `).get(fecha, profId, ev.hora, nombre);
-
-          if (!yaExiste) {
-            const pacienteId = obtenerOCrearPaciente(nombre, profId, '', '');
-            db.prepare(`
-              INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id)
-              VALUES (?, '', '', '', ?, ?, ?, 'pendiente', ?)
-            `).run(nombre, profId, fecha, ev.hora, pacienteId);
-            agregados++;
-          }
+          const yaExiste = db.prepare(`SELECT id FROM turnos WHERE fecha = ? AND profesional = ? AND hora = ? AND LOWER(nombre) = LOWER(?)`).get(fecha, profId, ev.hora, nombre);
+          if (!yaExiste) { const pacienteId = obtenerOCrearPaciente(nombre, profId, '', ''); db.prepare(`INSERT INTO turnos (nombre, email, telefono, acompanante, profesional, fecha, hora, estado, paciente_id) VALUES (?, '', '', '', ?, ?, ?, 'pendiente', ?)`).run(nombre, profId, fecha, ev.hora, pacienteId); agregados++; }
         }
       }
     }
-
     res.json({ ok: true, agregados, eliminados });
-  } catch (err) {
-    console.error('Error sincronizar:', err.message);
-    res.status(500).json({ error: 'No se pudo sincronizar con Google Calendar' });
-  }
+  } catch (err) { console.error('Error sincronizar:', err.message); res.status(500).json({ error: 'No se pudo sincronizar' }); }
 });
 
 // ─── API PACIENTES ────────────────────────────────────────────────────────────
@@ -349,11 +523,7 @@ app.patch('/api/pacientes/:id', authPanel, (req, res) => {
   if (!p) return res.status(404).json({ error: 'No encontrado' });
   const { nombre, obra_social, plan, sesiones_total, sesiones_usadas, profesional, activo } = req.body;
   const sinCompletar = (obra_social !== undefined && obra_social !== '') ? 0 : p.sin_completar;
-  db.prepare(`UPDATE pacientes SET nombre=?, obra_social=?, plan=?, sesiones_total=?, sesiones_usadas=?, profesional=?, activo=?, sin_completar=? WHERE id=?`).run(
-    nombre??p.nombre, obra_social??p.obra_social, plan??p.plan,
-    sesiones_total??p.sesiones_total, sesiones_usadas??p.sesiones_usadas,
-    profesional??p.profesional, activo??p.activo, sinCompletar, req.params.id
-  );
+  db.prepare(`UPDATE pacientes SET nombre=?, obra_social=?, plan=?, sesiones_total=?, sesiones_usadas=?, profesional=?, activo=?, sin_completar=? WHERE id=?`).run(nombre??p.nombre, obra_social??p.obra_social, plan??p.plan, sesiones_total??p.sesiones_total, sesiones_usadas??p.sesiones_usadas, profesional??p.profesional, activo??p.activo, sinCompletar, req.params.id);
   res.json({ ok: true });
 });
 
@@ -362,35 +532,18 @@ app.delete('/api/pacientes/:id', authPanel, (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── PACIENTES CON TURNOS EN UN RANGO (para carga semanal) ──────────────────
 app.get('/api/pacientes/recientes', authPanel, (req, res) => {
   const { desde, hasta, profesional } = req.query;
   if (!desde || !hasta) return res.status(400).json({ error: 'Faltan fechas' });
-
-  let query = `
-    SELECT p.*, MAX(t.fecha) as ultima_fecha, COUNT(t.id) as turnos_en_rango
-    FROM pacientes p
-    INNER JOIN turnos t ON t.paciente_id = p.id
-    WHERE p.activo = 1 AND t.fecha >= ? AND t.fecha <= ?
-  `;
+  let query = `SELECT p.*, MAX(t.fecha) as ultima_fecha, COUNT(t.id) as turnos_en_rango FROM pacientes p INNER JOIN turnos t ON t.paciente_id = p.id WHERE p.activo = 1 AND t.fecha >= ? AND t.fecha <= ?`;
   const params = [desde, hasta];
   if (profesional && profesional !== 'todos') { query += ' AND p.profesional = ?'; params.push(profesional); }
   query += ' GROUP BY p.id';
-
   try {
     let pacientes = db.prepare(query).all(...params);
-    // Ordenar en JS: primero los que faltan completar, después por fecha más reciente
-    pacientes.sort((a, b) => {
-      const aFalta = (a.sin_completar === 1 || !a.obra_social) ? 1 : 0;
-      const bFalta = (b.sin_completar === 1 || !b.obra_social) ? 1 : 0;
-      if (aFalta !== bFalta) return bFalta - aFalta;
-      return (b.ultima_fecha || '').localeCompare(a.ultima_fecha || '');
-    });
+    pacientes.sort((a, b) => { const aF = (a.sin_completar===1||!a.obra_social)?1:0, bF = (b.sin_completar===1||!b.obra_social)?1:0; if (aF!==bF) return bF-aF; return (b.ultima_fecha||'').localeCompare(a.ultima_fecha||''); });
     res.json({ pacientes });
-  } catch (err) {
-    console.error('Error pacientes/recientes:', err.message);
-    res.status(500).json({ error: 'Error al buscar pacientes recientes' });
-  }
+  } catch (err) { console.error('Error pacientes/recientes:', err.message); res.status(500).json({ error: 'Error' }); }
 });
 
 // ─── API ASISTENCIA ───────────────────────────────────────────────────────────
@@ -412,10 +565,8 @@ app.patch('/api/asistencia/:id', authPanel, (req, res) => {
   db.transaction(() => {
     db.prepare('UPDATE turnos SET estado = ? WHERE id = ?').run(estado, req.params.id);
     if (turno.paciente_id) {
-      if (estado === 'asistio' && turno.estado !== 'asistio')
-        db.prepare('UPDATE pacientes SET sesiones_usadas = sesiones_usadas + 1 WHERE id = ? AND sesiones_usadas < sesiones_total').run(turno.paciente_id);
-      if (turno.estado === 'asistio' && estado !== 'asistio')
-        db.prepare('UPDATE pacientes SET sesiones_usadas = MAX(0, sesiones_usadas - 1) WHERE id = ?').run(turno.paciente_id);
+      if (estado === 'asistio' && turno.estado !== 'asistio') db.prepare('UPDATE pacientes SET sesiones_usadas = sesiones_usadas + 1 WHERE id = ? AND sesiones_usadas < sesiones_total').run(turno.paciente_id);
+      if (turno.estado === 'asistio' && estado !== 'asistio') db.prepare('UPDATE pacientes SET sesiones_usadas = MAX(0, sesiones_usadas - 1) WHERE id = ?').run(turno.paciente_id);
     }
   })();
   res.json({ ok: true });
@@ -445,17 +596,9 @@ app.post('/api/asistencia/cerrar-dia', authPanel, (req, res) => {
   res.json({ ok: true, actualizados: pendientes.length });
 });
 
-app.get('/asistencia', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'asistencia.html'));
-});
-
-app.get('/inicio', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'inicio.html'));
-});
-
-app.get('/staff', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'staff.html'));
-});
+app.get('/asistencia', (req, res) => res.sendFile(path.join(__dirname, 'public', 'asistencia.html')));
+app.get('/inicio', (req, res) => res.sendFile(path.join(__dirname, 'public', 'inicio.html')));
+app.get('/staff', (req, res) => res.sendFile(path.join(__dirname, 'public', 'staff.html')));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Servidor corriendo en http://localhost:${PORT}`));
