@@ -268,8 +268,9 @@
       for (let m = 15 * 60; m < 20 * 60; m += 30)
         slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     } else {
-      // Julian: Lun-Vie último slot 19:30
-      for (let m = 16 * 60 + 30; m < 20 * 60; m += 30)
+      // Julian: Mié y Vie último slot 19:00, resto último slot 19:30
+      const endMin = (dow === 3 || dow === 5) ? 19 * 60 + 30 : 20 * 60;
+      for (let m = 16 * 60 + 30; m < endMin; m += 30)
         slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     }
     return slots;
