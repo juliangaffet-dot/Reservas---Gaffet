@@ -259,8 +259,8 @@
     const dow = new Date(dateStr + 'T12:00:00').getDay();
     const slots = [];
     if (profId === 'mauro') {
-      // Lun-Jue: último slot 19:00 | Vie: último slot 18:00
-      const endMin = dow === 5 ? 18 * 60 + 30 : 19 * 60 + 30;
+      // Lun-Jue: último slot 18:30 | Vie: último slot 17:30
+      const endMin = dow === 5 ? 18 * 60 : 19 * 60;
       for (let m = 15 * 60; m < endMin; m += 30)
         slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     } else if (profId === 'esteban') {
