@@ -99,12 +99,23 @@
     .prof-nombre{font-size:15px;font-weight:500;color:var(--gray-900);}
     .prof-mp{font-size:13px;color:var(--gray-500);margin-top:2px;}
     .prof-arrow{font-size:20px;color:var(--gray-500);}
-    /* ===== DESKTOP: turnero más ancho ===== */
+    /* ===== DESKTOP: hero full-width, contenido centrado ===== */
     @media(min-width:768px){
-      .page-wrapper{max-width:720px;}
-      .hero{padding:2.5rem 2.5rem 2rem;}
-      .content{padding:2rem 2.5rem;}
-      .hero-name{font-size:30px;}
+      .page-wrapper{max-width:100%;background:var(--gray-50);box-shadow:none;}
+      /* Hero ocupa todo el ancho */
+      .hero{
+        padding:3rem 2rem;
+        display:flex;flex-direction:column;align-items:center;text-align:center;
+      }
+      .hero-name{font-size:34px;}
+      .hero-mp{max-width:600px;}
+      .hero-meta{justify-content:center;}
+      /* Contenido centrado en una columna cómoda */
+      .content{
+        max-width:640px;
+        margin:0 auto;
+        padding:2.5rem 2rem;
+      }
       .days-grid{gap:10px;}
       .day-card{padding:14px 8px;}
       .day-number{font-size:22px;}
