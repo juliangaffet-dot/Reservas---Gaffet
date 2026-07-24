@@ -1,0 +1,36 @@
+{
+  "name": "Kine House",
+  "short_name": "Kine House",
+  "description": "Centro de Kinesiología y Fisioterapia · Reservá tu turno",
+  "start_url": "/inicio",
+  "display": "standalone",
+  "background_color": "#2D4A3E",
+  "theme_color": "#2D4A3E",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
