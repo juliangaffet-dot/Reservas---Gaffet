@@ -1,698 +1,341 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kine House — Panel</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --green-50:#ede9d8; --green-100:#d8d0b3; --green-500:#7b753f; --green-700:#5a5530; --green-900:#1C1C1E;
-      --gray-50:#faf4f0; --gray-100:#f3ede6; --gray-300:#e0d8cf; --gray-500:#8a8684; --gray-700:#6b6b5a; --gray-900:#1C1C1E;
-      --amber-50:#FAEEDA; --amber-800:#633806; --red-50:#FCEBEB; --red-500:#E24B4A;
-    }
-    * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'DM Sans',sans-serif; background:var(--gray-50); color:var(--gray-900); min-height:100vh; }
-    .page-wrapper { max-width:620px; margin:0 auto; min-height:100vh; background:white; box-shadow:0 0 60px rgba(0,0,0,0.06); }
-
-    .login-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:2rem; }
-    .login-box { width:100%; max-width:340px; }
-    .login-title { font-family:'DM Serif Display',serif; font-size:24px; color:var(--green-900); margin-bottom:4px; }
-    .login-sub { font-size:13px; color:var(--gray-500); margin-bottom:1.5rem; }
-    .login-input { width:100%; border:0.5px solid var(--gray-300); border-radius:8px; padding:10px 14px; font-family:'DM Sans',sans-serif; font-size:15px; margin-bottom:12px; }
-    .login-btn { width:100%; padding:12px; background:var(--green-500); color:white; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; cursor:pointer; }
-    .login-error { color:var(--red-500); font-size:13px; margin-top:8px; display:none; }
-
-    .header { background:#1C1C1E; padding:1.25rem 1.5rem; }
-    .header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
-    .header-title { font-family:'DM Serif Display',serif; font-size:20px; color:white; }
-    .header-actions { display:flex; gap:6px; flex-wrap:wrap; }
-    .tab-btn { background:rgba(255,255,255,0.1); border:0.5px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.7); font-size:12px; padding:6px 12px; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:500; }
-    .tab-btn.active { background:var(--green-500); border-color:var(--green-500); color:white; }
-    .logout-btn { background:none; border:0.5px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.5); font-size:12px; padding:6px 10px; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif; }
-    .controls { display:flex; gap:8px; flex-wrap:wrap; }
-    .ctrl-input { flex:1; min-width:110px; border:0.5px solid rgba(255,255,255,0.2); border-radius:8px; padding:8px 10px; font-family:'DM Sans',sans-serif; font-size:13px; background:rgba(255,255,255,0.1); color:white; }
-    .ctrl-input option { background:#1C1C1E; }
-    .ctrl-input:focus { outline:none; border-color:var(--green-100); }
-    .ctrl-btn { padding:8px 12px; background:var(--green-500); color:white; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap; }
-    .ctrl-btn.sync { background:rgba(255,255,255,0.15); border:0.5px solid rgba(255,255,255,0.3); }
-    .ctrl-btn.sync:hover { background:rgba(255,255,255,0.25); }
-    .ctrl-btn.syncing { opacity:0.6; pointer-events:none; }
-
-    .content { padding:1.25rem; }
-    .tab-content { display:none; }
-    .tab-content.active { display:block; }
-
-    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:1.25rem; }
-    .stat-box { background:var(--gray-50); border:0.5px solid var(--gray-300); border-radius:10px; padding:10px; text-align:center; }
-    .stat-num { font-size:22px; font-weight:500; }
-    .stat-label { font-size:11px; color:var(--gray-500); margin-top:2px; }
-    .stat-box.asistio .stat-num { color:var(--green-700); }
-    .stat-box.ausente .stat-num { color:var(--red-500); }
-    .stat-box.pendiente .stat-num { color:var(--amber-800); }
-
-    .lista { display:flex; flex-direction:column; gap:8px; margin-bottom:1.25rem; }
-    .turno-card { border:0.5px solid var(--gray-300); border-radius:10px; padding:12px 14px; }
-    .turno-card.asistio { border-color:var(--green-100); background:var(--green-50); }
-    .turno-card.ausente { border-color:#F09595; background:var(--red-50); }
-    .turno-top { display:flex; align-items:center; gap:10px; }
-    .turno-hora { font-size:15px; font-weight:500; min-width:44px; color:var(--gray-700); }
-    .turno-info { flex:1; }
-    .turno-nombre { font-size:14px; font-weight:500; color:var(--gray-900); }
-    .turno-sub { font-size:11px; color:var(--gray-500); margin-top:2px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-    .badge-sesiones { font-size:11px; font-weight:500; padding:2px 7px; border-radius:99px; }
-    .badge-ok { background:var(--green-50); color:var(--green-700); border:0.5px solid var(--green-100); }
-    .badge-pocas { background:var(--amber-50); color:var(--amber-800); border:0.5px solid #f0c87a; }
-    .badge-agotado { background:var(--red-50); color:var(--red-500); border:0.5px solid #F09595; }
-    .badge-sin-pac { background:var(--gray-100); color:var(--gray-500); border:0.5px solid var(--gray-300); }
-    .estado-badge { font-size:11px; font-weight:500; padding:3px 8px; border-radius:99px; white-space:nowrap; }
-    .estado-badge.asistio { background:var(--green-100); color:var(--green-900); }
-    .estado-badge.ausente { background:#F09595; color:#7A1111; }
-    .estado-badge.pendiente { background:var(--amber-50); color:var(--amber-800); }
-    .turno-actions { display:flex; gap:4px; margin-top:8px; justify-content:flex-end; }
-    .action-btn { border:none; border-radius:6px; padding:5px 10px; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; font-weight:500; }
-    .btn-asistio { background:var(--green-500); color:white; }
-    .btn-ausente { background:var(--red-500); color:white; }
-    .btn-pendiente { background:var(--gray-300); color:var(--gray-700); }
-
-    .form-section { border:0.5px solid var(--gray-300); border-radius:10px; padding:14px; margin-bottom:1rem; }
-    .form-section.dashed { border-style:dashed; border-color:var(--green-100); }
-    .form-title { font-size:12px; font-weight:500; color:var(--gray-500); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px; }
-    .form-row { display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
-    .form-input { flex:1; min-width:120px; border:0.5px solid var(--gray-300); border-radius:7px; padding:8px 10px; font-family:'DM Sans',sans-serif; font-size:13px; }
-    .form-input:focus { outline:none; border-color:var(--green-500); }
-    .form-select { flex:1; min-width:120px; border:0.5px solid var(--gray-300); border-radius:7px; padding:8px 10px; font-family:'DM Sans',sans-serif; font-size:13px; background:white; }
-    .form-btn { padding:8px 16px; background:var(--green-500); color:white; border:none; border-radius:7px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap; }
-    .cerrar-btn { width:100%; padding:12px; background:#1C1C1E; color:white; border:none; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; margin-bottom:1rem; }
-
-    .pac-card { border:0.5px solid var(--gray-300); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
-    .pac-top { display:flex; align-items:center; gap:10px; }
-    .pac-avatar { width:36px; height:36px; border-radius:50%; background:#1C1C1E; display:flex; align-items:center; justify-content:center; color:white; font-size:13px; font-weight:500; flex-shrink:0; }
-    .pac-info { flex:1; }
-    .pac-nombre { font-size:14px; font-weight:500; color:var(--gray-900); }
-    .pac-sub { font-size:12px; color:var(--gray-500); margin-top:2px; }
-    .pac-sesiones { text-align:right; }
-    .pac-num { font-size:20px; font-weight:500; }
-    .pac-num.ok { color:var(--green-700); }
-    .pac-num.pocas { color:var(--amber-800); }
-    .pac-num.agotado { color:var(--red-500); }
-    .pac-label { font-size:10px; color:var(--gray-500); }
-    .pac-barra { height:4px; border-radius:2px; background:var(--gray-100); margin-top:10px; overflow:hidden; }
-    .pac-barra-fill { height:100%; border-radius:2px; background:var(--green-500); }
-    .pac-barra-fill.pocas { background:#f0c87a; }
-    .pac-barra-fill.agotado { background:var(--red-500); }
-    .pac-actions { display:flex; gap:6px; margin-top:10px; justify-content:flex-end; flex-wrap:wrap; }
-    .pac-btn { border:none; border-radius:6px; padding:5px 10px; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; font-weight:500; }
-    .pac-btn-edit { background:var(--gray-100); color:var(--gray-700); }
-    .pac-btn-del { background:var(--red-50); color:var(--red-500); }
-    .pac-btn-add { background:var(--green-50); color:var(--green-700); }
-    .pac-btn-sub { background:var(--amber-50); color:var(--amber-800); }
-
-    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:50; align-items:center; justify-content:center; padding:1rem; }
-    .modal-overlay.open { display:flex; }
-    .modal { background:white; border-radius:14px; padding:1.5rem; width:100%; max-width:360px; }
-    .modal-title { font-size:16px; font-weight:500; margin-bottom:1rem; }
-    .modal-input { width:100%; border:0.5px solid var(--gray-300); border-radius:8px; padding:10px 12px; font-family:'DM Sans',sans-serif; font-size:14px; margin-bottom:10px; }
-    .modal-select { width:100%; border:0.5px solid var(--gray-300); border-radius:8px; padding:10px 12px; font-family:'DM Sans',sans-serif; font-size:14px; margin-bottom:10px; background:white; }
-    .modal-row { display:flex; gap:8px; }
-    .modal-col { flex:1; }
-    .modal-label { font-size:11px; color:var(--gray-500); display:block; margin-bottom:4px; }
-    .modal-btns { display:flex; gap:8px; margin-top:4px; }
-    .modal-btn-ok { flex:1; padding:10px; background:var(--green-500); color:white; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; }
-    .modal-btn-cancel { flex:1; padding:10px; background:var(--gray-100); color:var(--gray-700); border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; }
-
-    .sync-banner { background:var(--green-50); border:0.5px solid var(--green-100); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--green-700); margin-bottom:1rem; display:none; }
-    .subtab-row { display:flex; gap:6px; margin-bottom:1.25rem; border-bottom:0.5px solid var(--gray-300); padding-bottom:1rem; flex-wrap:wrap; }
-    .subtab-btn { background:var(--gray-100); border:none; color:var(--gray-700); font-size:12px; padding:7px 14px; border-radius:99px; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:500; }
-    .subtab-btn.active { background:var(--green-500); color:white; }
-    .subtab-content { display:none; }
-    .subtab-content.active { display:block; }
-    .empty { text-align:center; padding:2rem; color:var(--gray-500); font-size:14px; }
-    .prof-tag { font-size:10px; background:var(--gray-100); color:var(--gray-500); border-radius:4px; padding:1px 5px; }
-    .badge-completar { font-size:10px; font-weight:500; background:var(--amber-50); color:var(--amber-800); border:0.5px solid #f0c87a; border-radius:4px; padding:1px 6px; margin-left:4px; }
-    .pac-card-pendiente { border-color:#f0c87a; background:#fffaf0; }
-    .toast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%); background:var(--green-900); color:white; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:500; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:100; white-space:nowrap; }
-    .toast.show { opacity:1; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistencia — Kine House</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#faf4f0; --dark:#1C1C1E; --accent:#7b753f; --green:#2D4A3E;
+    --border:#e0d8cf; --muted:#6b6b5a;
+    --rojo:#e8503a; --verde:#8fbf7f; --verde-bg:#d6ecca; --verde-txt:#3d6b28;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);padding:20px;}
+  .login-wrap{max-width:380px;margin:10vh auto;text-align:center;}
+  .login-logo{width:72px;height:72px;border-radius:16px;background:var(--dark);color:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:24px;margin:0 auto 20px;}
+  .login-wrap h2{font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:6px;}
+  .login-wrap p{color:var(--muted);font-size:14px;margin-bottom:20px;}
+  .login-wrap input{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;margin-bottom:12px;}
+  .login-wrap button{width:100%;padding:13px;border:none;border-radius:10px;background:var(--accent);color:white;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;}
+  .login-err{color:var(--rojo);font-size:13px;margin-top:10px;display:none;}
+  #app{display:none;}
+  .top{display:flex;align-items:center;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
+  h1{font-family:'DM Serif Display',serif;font-size:24px;}
+  .top-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+  .btn-back{padding:8px 16px;border-radius:9px;border:1px solid var(--border);background:white;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;}
+  .meses{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;}
+  .mes{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:white;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);}
+  .mes.active{background:var(--green);color:white;border-color:var(--green);}
+  .prof-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .ptab{padding:10px 22px;border-radius:10px;border:1px solid var(--border);background:white;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);transition:.15s;}
+  .ptab:hover{border-color:var(--green);}
+  .ptab.active{background:var(--green);color:white;border-color:var(--green);}
+  .toolbar{display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap;}
+  .search{padding:9px 14px;border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:13px;min-width:200px;}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-left:auto;align-items:center;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .chip{width:14px;height:14px;border-radius:4px;display:inline-block;}
+  .wrap{background:white;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .scroll{overflow-x:auto;}
+  table{border-collapse:collapse;width:100%;font-size:13px;}
+  th,td{border:1px solid var(--border);padding:0;text-align:center;}
+  thead th{background:var(--green);color:white;font-weight:600;padding:10px 6px;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+  .num-col{width:36px;} .name-col{min-width:170px;text-align:left;}
+  .os-col{min-width:90px;} .ses-col{width:60px;} .tel-col{min-width:115px;}
+  .asist-col{width:92px;} .obs-col{min-width:180px;} .del-col{width:36px;}
+  tbody td{height:48px;vertical-align:middle;}
+  tbody .name-cell{text-align:left;padding:4px 0;}
+  tbody input{width:100%;height:100%;border:none;background:transparent;font-family:inherit;font-size:13px;text-align:center;padding:8px 4px;}
+  tbody input.name-inp{height:auto;text-align:left;font-weight:600;padding:2px 10px 0;display:block;}
+  .sesiones-cnt{display:block;line-height:1.2;font-size:11px;color:var(--muted);font-weight:500;padding:0 10px 4px;}
+  tbody input:focus{outline:2px solid var(--accent);outline-offset:-2px;background:#fffef8;}
+  .num-cell{font-weight:700;color:white;}
+  tr.estado-rojo .num-cell{background:var(--rojo);}
+  tr.estado-normal .num-cell{background:var(--muted);}
+  tr.estado-rojo .name-cell input.name-inp{color:var(--rojo);}
+  td.asist{padding:0;}
+  .asist-inner{display:flex;flex-direction:column;height:100%;}
+  .asist-inner input{flex:1;height:auto;padding:4px;font-size:12px;}
+  .pay-bar{height:14px;background:#f0ebe4;cursor:pointer;font-size:9px;line-height:14px;color:#b5ad9e;border-top:1px solid var(--border);user-select:none;transition:.1s;}
+  .pay-bar:hover{background:#e6dfd4;}
+  .asist.pagada .pay-bar{background:var(--verde);color:white;font-weight:700;}
+  .asist.pagada input{background:var(--verde-bg);color:var(--verde-txt);font-weight:600;}
+  .asist.empty .pay-bar{visibility:hidden;}
+  .del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;}
+  .del-btn:hover{color:var(--rojo);}
+  .add-row{padding:12px;text-align:center;}
+  .add-row button{background:none;border:1px dashed var(--accent);color:var(--accent);padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;}
+  .saving{position:fixed;bottom:16px;right:16px;background:var(--green);color:white;padding:8px 16px;border-radius:99px;font-size:12px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;}
+  .saving.show{opacity:1;}
+</style>
 </head>
 <body>
 
-<div id="login-screen" class="login-screen">
-  <div class="login-box">
-    <div class="login-title">Kine House</div>
-    <div class="login-sub">Panel de asistencia</div>
-    <input type="password" id="inp-pass" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter') login()">
-    <button class="login-btn" onclick="login()">Ingresar</button>
-    <div class="login-error" id="login-error">Contraseña incorrecta</div>
+<div class="login-wrap" id="login">
+  <div class="login-logo">KH</div>
+  <h2>Equipo Kine House</h2>
+  <p>Ingresá la contraseña del equipo</p>
+  <input type="password" id="pass" placeholder="Contraseña" onkeydown="if(event.key==='Enter')login()">
+  <button onclick="login()">Ingresar</button>
+  <div class="login-err" id="login-err">Contraseña incorrecta</div>
+</div>
+
+<div id="app">
+  <div class="top">
+    <h1>Asistencia · Kine House</h1>
+    <div class="top-actions">
+      <a class="btn-back" href="/staff">← Panel</a>
+    </div>
+  </div>
+
+  <div class="meses" id="meses"></div>
+
+  <div class="prof-tabs">
+    <div class="ptab active" data-prof="julian" onclick="setProf('julian',this)">Julián Gaffet</div>
+    <div class="ptab" data-prof="mauro" onclick="setProf('mauro',this)">Mauro Ayub</div>
+    <div class="ptab" data-prof="esteban" onclick="setProf('esteban',this)">Esteban Videla</div>
+  </div>
+
+  <div class="toolbar">
+    <input class="search" id="buscar" placeholder="🔍 Buscar paciente..." oninput="render()">
+    <div class="legend">
+      <span><span class="chip" style="background:var(--verde)"></span>Pagada</span>
+      <span><span class="chip" style="background:white;border:1px solid #ccc"></span>Sin pagar</span>
+      <span><span class="chip" style="background:var(--rojo)"></span>Terminó</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="scroll">
+      <table>
+        <thead><tr>
+          <th class="num-col">#</th><th class="name-col">Nombre y Apellido</th>
+          <th class="os-col">Obra Social</th><th class="ses-col">Sesiones</th><th class="tel-col">Teléfono</th>
+          <th class="asist-col" colspan="10">Asistencia — escribí la fecha o "hoy"</th>
+          <th class="obs-col">Observaciones</th><th class="del-col"></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="add-row"><button onclick="addRow()">+ Agregar paciente</button></div>
   </div>
 </div>
 
-<div id="panel" class="page-wrapper" style="display:none;">
-  <div class="header">
-    <div class="header-top">
-      <div class="header-title">Kine House</div>
-      <div class="header-actions">
-        <button class="tab-btn active" id="tab-asistencia-btn" onclick="switchTab('asistencia')">Asistencia</button>
-        <button class="tab-btn" id="tab-pacientes-btn" onclick="switchTab('pacientes')">Pacientes</button>
-        <button class="logout-btn" onclick="logout()">Salir</button>
-      </div>
-    </div>
-    <div class="controls" id="ctrl-asistencia">
-      <input type="date" id="ctrl-fecha" class="ctrl-input" onchange="cargarAsistencia()">
-      <select id="ctrl-prof" class="ctrl-input" onchange="cargarAsistencia()">
-        <option value="todos">Todos</option>
-        <option value="julian">Julián</option>
-        <option value="mauro">Mauro</option>
-        <option value="esteban">Esteban</option>
-      </select>
-      <button class="ctrl-btn" onclick="cargarAsistencia()">↺</button>
-      <button class="ctrl-btn sync" id="btn-sync" onclick="sincronizar()" title="Sincronizar con Google Calendar">📅 Sincronizar</button>
-    </div>
-    <div class="controls" id="ctrl-pacientes" style="display:none;">
-      <select id="ctrl-prof-pac" class="ctrl-input" onchange="cargarVistaPacientes()">
-        <option value="todos">Todos</option>
-        <option value="julian">Julián</option>
-        <option value="mauro">Mauro</option>
-        <option value="esteban">Esteban</option>
-      </select>
-      <button class="ctrl-btn" onclick="cargarVistaPacientes()">↺</button>
-    </div>
-  </div>
-
-  <div class="content">
-
-    <!-- ASISTENCIA -->
-    <div id="tab-asistencia" class="tab-content active">
-      <div class="sync-banner" id="sync-banner"></div>
-      <div class="stats" id="stats" style="display:none;">
-        <div class="stat-box asistio"><div class="stat-num" id="stat-asistio">0</div><div class="stat-label">Asistieron</div></div>
-        <div class="stat-box ausente"><div class="stat-num" id="stat-ausente">0</div><div class="stat-label">Ausentes</div></div>
-        <div class="stat-box pendiente"><div class="stat-num" id="stat-pendiente">0</div><div class="stat-label">Pendientes</div></div>
-      </div>
-      <div class="lista" id="lista-asistencia"></div>
-
-      <div class="form-section dashed">
-        <div class="form-title">+ Agregar paciente sin turno</div>
-        <div class="form-row">
-          <input type="text" id="man-nombre" class="form-input" placeholder="Nombre del paciente">
-          <input type="time" id="man-hora" class="form-input" value="09:00">
-        </div>
-        <div class="form-row">
-          <select id="man-prof" class="form-select">
-            <option value="julian">Julián</option>
-            <option value="mauro">Mauro</option>
-            <option value="esteban">Esteban</option>
-          </select>
-          <button class="form-btn" onclick="agregarManual()">Agregar</button>
-        </div>
-      </div>
-
-      <button class="cerrar-btn" onclick="cerrarDia()">✅ Marcar todos los pendientes como asistió</button>
-    </div>
-
-    <!-- PACIENTES -->
-    <div id="tab-pacientes" class="tab-content">
-      <div class="subtab-row">
-        <button class="subtab-btn active" id="subtab-todos-btn" onclick="switchSubtab('todos')">Todos</button>
-        <button class="subtab-btn" id="subtab-recientes-btn" onclick="switchSubtab('recientes')">Sacaron turno esta semana</button>
-      </div>
-
-      <div id="subtab-recientes" class="subtab-content">
-        <div class="form-row" style="margin-bottom:1rem;">
-          <input type="date" id="rec-desde" class="form-input">
-          <input type="date" id="rec-hasta" class="form-input">
-          <button class="form-btn" onclick="cargarRecientes()">Buscar</button>
-        </div>
-        <div id="lista-recientes"></div>
-      </div>
-
-      <div id="subtab-todos" class="subtab-content active">
-      <div class="form-section" style="margin-bottom:1.25rem;">
-        <div class="form-title">Nuevo paciente</div>
-        <div class="form-row">
-          <input type="text" id="nac-nombre" class="form-input" placeholder="Nombre completo">
-          <input type="text" id="nac-os" class="form-input" placeholder="Obra social">
-        </div>
-        <div class="form-row">
-          <input type="text" id="nac-plan" class="form-input" placeholder="Plan (ej: IPS x8)">
-          <select id="nac-sesiones" class="form-select">
-            <option value="8">8 sesiones</option>
-            <option value="10" selected>10 sesiones</option>
-            <option value="12">12 sesiones</option>
-            <option value="20">20 sesiones</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <select id="nac-prof" class="form-select">
-            <option value="julian">Julián</option>
-            <option value="mauro">Mauro</option>
-            <option value="esteban">Esteban</option>
-          </select>
-          <button class="form-btn" onclick="crearPaciente()">Agregar</button>
-        </div>
-      </div>
-      <div id="lista-pacientes"></div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- MODAL EDITAR -->
-<div class="modal-overlay" id="modal-editar">
-  <div class="modal">
-    <div class="modal-title">Editar paciente</div>
-    <input type="hidden" id="edit-id">
-    <input type="text" id="edit-nombre" class="modal-input" placeholder="Nombre">
-    <input type="text" id="edit-os" class="modal-input" placeholder="Obra social">
-    <input type="text" id="edit-plan" class="modal-input" placeholder="Plan">
-    <div class="modal-row" style="margin-bottom:10px;">
-      <div class="modal-col">
-        <label class="modal-label">Total sesiones</label>
-        <input type="number" id="edit-total" class="modal-input" min="1" max="50" style="margin-bottom:0;">
-      </div>
-      <div class="modal-col">
-        <label class="modal-label">Usadas</label>
-        <input type="number" id="edit-usadas" class="modal-input" min="0" style="margin-bottom:0;">
-      </div>
-    </div>
-    <select id="edit-prof" class="modal-select">
-      <option value="julian">Julián</option>
-      <option value="mauro">Mauro</option>
-      <option value="esteban">Esteban</option>
-    </select>
-    <div class="modal-btns">
-      <button class="modal-btn-cancel" onclick="cerrarModal()">Cancelar</button>
-      <button class="modal-btn-ok" onclick="guardarEdicion()">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
+<div class="saving" id="saving">Guardando...</div>
 
 <script>
-  let password = '';
-  const STORAGE_KEY = 'kh_panel_pass';
+  const MESES_NUM=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const MESES_LBL=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  const MESES_FECHA=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const NASIST=10;
+  const YEAR=new Date().getFullYear();
 
-  function hoy() {
-    const arg = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
-    return arg.toISOString().substring(0, 10);
-  }
+  let PASSWORD='';
+  let profActual='julian';
+  let mesActual=YEAR+'-'+MESES_NUM[new Date().getMonth()];
+  let pacientes=[];
 
-  function entrarConPassword(pass) {
-    return fetch('/api/asistencia?fecha=' + hoy(), { headers: { 'x-panel-password': pass } })
-      .then(r => {
-        if (r.status === 401) return false;
-        password = pass;
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('panel').style.display = 'block';
-        document.getElementById('ctrl-fecha').value = hoy();
-        cargarAsistencia();
-        return true;
-      }).catch(() => false);
-  }
+  function fechaHoy(){ const d=new Date(); return d.getDate()+'-'+MESES_FECHA[d.getMonth()]; }
 
-  function login() {
-    const pass = document.getElementById('inp-pass').value;
-    if (!pass) return;
-    entrarConPassword(pass).then(ok => {
-      if (ok) {
-        try { localStorage.setItem(STORAGE_KEY, pass); } catch(e) {}
-      } else {
-        document.getElementById('login-error').style.display = 'block';
-      }
-    });
-  }
-
-  function logout() {
-    password = '';
-    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-    document.getElementById('panel').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('inp-pass').value = '';
-  }
-
-  // Auto-login si hay contraseña guardada de una sesión anterior
-  (function intentarAutoLogin() {
-    let guardada = null;
-    try { guardada = localStorage.getItem(STORAGE_KEY); } catch(e) {}
-    if (guardada) {
-      entrarConPassword(guardada).then(ok => {
-        if (!ok) { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} }
-      });
+  async function login(){
+    const p=document.getElementById('pass').value;
+    const r=await fetch('/api/planilla?profesional=julian&mes='+mesActual,{headers:{'x-panel-password':p}});
+    if(r.ok){
+      PASSWORD=p;
+      try{ localStorage.setItem('kh_panel_pass',p); }catch(e){}
+      document.getElementById('login').style.display='none';
+      document.getElementById('app').style.display='block';
+      buildMeses();
+      cargar();
+    } else {
+      document.getElementById('login-err').style.display='block';
     }
+  }
+  (async ()=>{
+    try{
+      const saved=localStorage.getItem('kh_panel_pass');
+      if(saved){
+        const r=await fetch('/api/planilla?profesional=julian&mes='+mesActual,{headers:{'x-panel-password':saved}});
+        if(r.ok){
+          PASSWORD=saved;
+          document.getElementById('login').style.display='none';
+          document.getElementById('app').style.display='block';
+          buildMeses();
+          cargar();
+        }
+      }
+    }catch(e){}
   })();
 
-  function switchTab(tab) {
-    ['asistencia','pacientes'].forEach(t => {
-      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
-      document.getElementById('tab-' + t + '-btn').classList.toggle('active', t === tab);
-    });
-    document.getElementById('ctrl-asistencia').style.display = tab === 'asistencia' ? 'flex' : 'none';
-    document.getElementById('ctrl-pacientes').style.display = tab === 'pacientes' ? 'flex' : 'none';
-    if (tab === 'pacientes') cargarVistaPacientes();
+  function hdrs(){ return {'Content-Type':'application/json','x-panel-password':PASSWORD}; }
+
+  function showSaving(){
+    const el=document.getElementById('saving');
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t=setTimeout(()=>el.classList.remove('show'),900);
   }
 
-  function switchSubtab(sub) {
-    ['todos','recientes'].forEach(s => {
-      document.getElementById('subtab-' + s).classList.toggle('active', s === sub);
-      document.getElementById('subtab-' + s + '-btn').classList.toggle('active', s === sub);
+  function buildMeses(){
+    const cont=document.getElementById('meses');
+    cont.innerHTML=MESES_LBL.map((m,i)=>{
+      const val=YEAR+'-'+MESES_NUM[i];
+      return '<div class="mes'+(val===mesActual?' active':'')+'" data-mes="'+val+'" onclick="setMes(\''+val+'\',this)">'+m+'</div>';
+    }).join('');
+  }
+  function setMes(m, el){
+    mesActual=m;
+    document.querySelectorAll('.mes').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+    cargar();
+  }
+  function setProf(p, el){
+    profActual=p;
+    document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    cargar();
+  }
+
+  async function cargar(){
+    const r=await fetch('/api/planilla?profesional='+profActual+'&mes='+mesActual,{headers:{'x-panel-password':PASSWORD}});
+    const data=await r.json();
+    pacientes=(data.pacientes||[]).map(p=>{
+      const dias=[];
+      for(let k=0;k<NASIST;k++) dias.push({f:'',pagada:false});
+      (p.sesiones||[]).forEach(s=>{ if(s.col<NASIST) dias[s.col]={f:s.fecha||'',pagada:!!s.pagada}; });
+      return { id:p.id, n:p.nombre, os:p.obra_social, ses:p.sesiones_autorizadas, tel:p.telefono, obs:p.observaciones, dias };
     });
-    if (sub === 'recientes') {
-      if (!document.getElementById('rec-desde').value) {
-        // Default: últimos 7 días
-        const hastaD = new Date(new Date().getTime() - 3*60*60*1000);
-        const desdeD = new Date(hastaD.getTime() - 6*24*60*60*1000);
-        document.getElementById('rec-hasta').value = hastaD.toISOString().substring(0,10);
-        document.getElementById('rec-desde').value = desdeD.toISOString().substring(0,10);
+    render();
+  }
+
+  function contarRealizadas(p){ let n=0; for(const d of p.dias) if(d.f && d.f.trim()) n++; return n; }
+  function contarPagadas(p){ let n=0; for(const d of p.dias) if(d.f && d.f.trim() && d.pagada) n++; return n; }
+  function esRojo(p){ return contarRealizadas(p) >= p.ses; }
+
+  function esc(s){ return (s||'').toString().replace(/"/g,'&quot;'); }
+
+  function render(){
+    const q=(document.getElementById('buscar').value||'').toLowerCase();
+    let html='';
+    let visible=0;
+    for(let i=0;i<pacientes.length;i++){
+      const p=pacientes[i];
+      if(q && !(p.n||'').toLowerCase().includes(q)) continue;
+      visible++;
+      let cells='';
+      for(let c=0;c<NASIST;c++){
+        const d=p.dias[c];
+        const f=d.f||'';
+        const pag=(d.pagada && f)?true:false;
+        cells+='<td class="asist'+(pag?' pagada':'')+(f?'':' empty')+'">'
+          +'<div class="asist-inner">'
+          +'<input class="fecha-inp" value="'+esc(f)+'" data-i="'+i+'" data-c="'+c+'" placeholder="—">'
+          +'<div class="pay-bar" data-i="'+i+'" data-c="'+c+'">'+(pag?'✓ pagó':'pagar')+'</div>'
+          +'</div></td>';
       }
-      cargarRecientes();
+      html+='<tr class="estado-'+(esRojo(p)?'rojo':'normal')+'" data-row="'+i+'">'
+        +'<td class="num-cell">'+visible+'</td>'
+        +'<td class="name-cell"><input class="name-inp" value="'+esc(p.n)+'" data-i="'+i+'" data-field="n">'
+        +'<div class="sesiones-cnt">'+contarRealizadas(p)+'/'+p.ses+' realizadas · '+contarPagadas(p)+' pagadas</div></td>'
+        +'<td><input value="'+esc(p.os)+'" data-i="'+i+'" data-field="os"></td>'
+        +'<td><input value="'+p.ses+'" style="text-align:center" data-i="'+i+'" data-field="ses"></td>'
+        +'<td><input value="'+esc(p.tel)+'" data-i="'+i+'" data-field="tel"></td>'
+        +cells
+        +'<td><input placeholder="..." value="'+esc(p.obs)+'" data-i="'+i+'" data-field="obs"></td>'
+        +'<td><button class="del-btn" onclick="delRow('+i+')" title="Eliminar paciente">✕</button></td></tr>';
     }
+    document.getElementById('tbody').innerHTML=html;
+    bind();
   }
 
-  function cargarVistaPacientes() {
-    cargarPacientes();
+  function refreshContador(i){
+    const fila=document.querySelector('tr[data-row="'+i+'"]');
+    if(!fila) return;
+    const p=pacientes[i];
+    fila.querySelector('.sesiones-cnt').textContent=
+      contarRealizadas(p)+'/'+p.ses+' realizadas · '+contarPagadas(p)+' pagadas';
+    fila.className='estado-'+(esRojo(p)?'rojo':'normal');
+    fila.setAttribute('data-row',i);
   }
 
-  async function cargarRecientes() {
-    const desde = document.getElementById('rec-desde').value;
-    const hasta = document.getElementById('rec-hasta').value;
-    const prof = document.getElementById('ctrl-prof-pac').value;
-    if (!desde || !hasta) return;
-    const lista = document.getElementById('lista-recientes');
-    lista.innerHTML = '<div class="empty">Cargando...</div>';
-    let url = `/api/pacientes/recientes?desde=${desde}&hasta=${hasta}`;
-    if (prof !== 'todos') url += `&profesional=${prof}`;
-    const r = await fetch(url, { headers: { 'x-panel-password': password } });
-    const data = await r.json();
-    const pacientes = data.pacientes || [];
-    if (!pacientes.length) { lista.innerHTML = '<div class="empty">Nadie sacó turno en ese rango</div>'; return; }
-
-    _pacientesRecientes = pacientes;
-    const PROF = { julian:'Julián', mauro:'Mauro', esteban:'Esteban' };
-    lista.innerHTML = pacientes.map(p => {
-      const sinCompletar = p.sin_completar === 1 || !p.obra_social;
-      const ini = p.nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-      const rest = p.sesiones_total - p.sesiones_usadas;
-      return `
-        <div class="pac-card${sinCompletar ? ' pac-card-pendiente' : ''}">
-          <div class="pac-top">
-            <div class="pac-avatar">${ini}</div>
-            <div class="pac-info">
-              <div class="pac-nombre">${p.nombre} ${sinCompletar ? '<span class="badge-completar">completar datos</span>' : ''}</div>
-              <div class="pac-sub">
-                ${p.obra_social || 'Sin obra social cargada'}${p.plan ? ' · ' + p.plan : ''}
-                <span class="prof-tag">${PROF[p.profesional]||p.profesional}</span>
-                <span class="prof-tag">último turno: ${p.ultima_fecha}</span>
-              </div>
-            </div>
-            <div class="pac-sesiones">
-              <div class="pac-num ${rest<=0?'agotado':rest<=2?'pocas':'ok'}">${rest}</div>
-              <div class="pac-label">de ${p.sesiones_total}</div>
-            </div>
-          </div>
-          <div class="pac-actions">
-            <button class="pac-btn pac-btn-edit" onclick="abrirEditarRecientes(${p.id})">Editar</button>
-          </div>
-        </div>`;
-    }).join('');
+  const timers={};
+  function debounced(key, fn, ms){
+    clearTimeout(timers[key]);
+    timers[key]=setTimeout(fn, ms||600);
   }
 
-  let _pacientesRecientes = [];
-  function abrirEditarRecientes(id) {
-    const p = _pacientesRecientes.find(x => x.id === id);
-    if (!p) return;
-    document.getElementById('edit-id').value = p.id;
-    document.getElementById('edit-nombre').value = p.nombre;
-    document.getElementById('edit-os').value = p.obra_social || '';
-    document.getElementById('edit-plan').value = p.plan || '';
-    document.getElementById('edit-total').value = p.sesiones_total;
-    document.getElementById('edit-usadas').value = p.sesiones_usadas;
-    document.getElementById('edit-prof').value = p.profesional;
-    document.getElementById('modal-editar').dataset.fromRecientes = '1';
-    document.getElementById('modal-editar').classList.add('open');
+  async function guardarPaciente(i){
+    const p=pacientes[i];
+    await fetch('/api/planilla/pacientes/'+p.id,{method:'PATCH',headers:hdrs(),
+      body:JSON.stringify({nombre:p.n,obra_social:p.os,sesiones_autorizadas:p.ses,telefono:p.tel,observaciones:p.obs})});
+    showSaving();
+  }
+  async function guardarSesion(i,c){
+    const p=pacientes[i];
+    const d=p.dias[c];
+    await fetch('/api/planilla/sesion',{method:'PUT',headers:hdrs(),
+      body:JSON.stringify({paciente_id:p.id,mes:mesActual,col:c,fecha:d.f,pagada:d.pagada})});
+    showSaving();
   }
 
-  // ─── SINCRONIZAR ──────────────────────────────────────────────────────────
-  async function sincronizar() {
-    const fecha = document.getElementById('ctrl-fecha').value;
-    const prof = document.getElementById('ctrl-prof').value;
-    if (!fecha) return;
-    const btn = document.getElementById('btn-sync');
-    btn.classList.add('syncing');
-    btn.textContent = '⏳ Sincronizando...';
-    try {
-      const r = await fetch('/api/sincronizar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
-        body: JSON.stringify({ fecha, profesional: prof })
-      });
-      const data = await r.json();
-      if (data.ok) {
-        const banner = document.getElementById('sync-banner');
-        let msg = '📅 Sincronizado con Google Calendar.';
-        if (data.agregados > 0) msg += ` ${data.agregados} turno(s) nuevo(s) agregado(s).`;
-        if (data.eliminados > 0) msg += ` ${data.eliminados} turno(s) cancelado(s) eliminado(s).`;
-        if (data.agregados === 0 && data.eliminados === 0) msg += ' Todo estaba al día.';
-        banner.textContent = msg;
-        banner.style.display = 'block';
-        setTimeout(() => { banner.style.display = 'none'; }, 5000);
-        cargarAsistencia();
-      } else {
-        showToast('⚠️ Error al sincronizar');
-      }
-    } catch(e) {
-      showToast('⚠️ Error al sincronizar');
-    }
-    btn.classList.remove('syncing');
-    btn.textContent = '📅 Sincronizar';
-  }
-
-  // ─── ASISTENCIA ───────────────────────────────────────────────────────────
-  async function cargarAsistencia() {
-    const fecha = document.getElementById('ctrl-fecha').value;
-    const prof = document.getElementById('ctrl-prof').value;
-    if (!fecha) return;
-    document.getElementById('lista-asistencia').innerHTML = '<div class="empty">Cargando...</div>';
-    document.getElementById('stats').style.display = 'none';
-    let url = `/api/asistencia?fecha=${fecha}`;
-    if (prof !== 'todos') url += `&profesional=${prof}`;
-    const r = await fetch(url, { headers: { 'x-panel-password': password } });
-    const data = await r.json();
-    const turnos = data.turnos || [];
-    const stats = { asistio:0, ausente:0, pendiente:0 };
-    turnos.forEach(t => { if (stats[t.estado] !== undefined) stats[t.estado]++; });
-    document.getElementById('stat-asistio').textContent = stats.asistio;
-    document.getElementById('stat-ausente').textContent = stats.ausente;
-    document.getElementById('stat-pendiente').textContent = stats.pendiente;
-    document.getElementById('stats').style.display = turnos.length ? 'grid' : 'none';
-
-    const PROF = { julian:'Julián Gaffet', mauro:'Mauro Ayub', esteban:'Esteban Videla' };
-    const ESTADOS = { asistio:'Asistió', ausente:'Ausente', pendiente:'Pendiente' };
-    const lista = document.getElementById('lista-asistencia');
-    if (!turnos.length) { lista.innerHTML = '<div class="empty">No hay turnos para este día.<br>Usá el botón 📅 Sincronizar para importar desde Google Calendar.</div>'; return; }
-
-    lista.innerHTML = turnos.map(t => {
-      let sesHTML = '';
-      if (t.paciente_id && t.sesiones_total) {
-        const rest = t.sesiones_total - t.sesiones_usadas;
-        const cl = rest <= 0 ? 'badge-agotado' : rest <= 2 ? 'badge-pocas' : 'badge-ok';
-        const txt = rest <= 0 ? 'Sin sesiones' : `${rest} sesión${rest !== 1 ? 'es' : ''} restante${rest !== 1 ? 's' : ''}`;
-        sesHTML = `<span class="badge-sesiones ${cl}">${txt}</span>`;
-      } else {
-        sesHTML = `<span class="badge-sesiones badge-sin-pac">Sin ficha</span>`;
-      }
-      const esSinTurno = !t.email && !t.telefono && t.acompanante === '' && t.estado === 'asistio' && !t.paciente_id;
-      return `
-        <div class="turno-card ${t.estado}">
-          <div class="turno-top">
-            <div class="turno-hora">${t.hora}</div>
-            <div class="turno-info">
-              <div class="turno-nombre">${t.nombre}</div>
-              <div class="turno-sub"><span>${PROF[t.profesional]||t.profesional}</span>${sesHTML}</div>
-            </div>
-            <span class="estado-badge ${t.estado}">${ESTADOS[t.estado]}</span>
-          </div>
-          <div class="turno-actions">
-            ${t.estado !== 'asistio' ? `<button class="action-btn btn-asistio" onclick="cambiarEstado(${t.id},'asistio')">✓ Asistió</button>` : ''}
-            ${t.estado !== 'ausente' ? `<button class="action-btn btn-ausente" onclick="cambiarEstado(${t.id},'ausente')">✗ Ausente</button>` : ''}
-            ${t.estado !== 'pendiente' ? `<button class="action-btn btn-pendiente" onclick="cambiarEstado(${t.id},'pendiente')">↺</button>` : ''}
-          </div>
-        </div>`;
-    }).join('');
-  }
-
-  async function cambiarEstado(id, estado) {
-    await fetch(`/api/asistencia/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
-      body: JSON.stringify({ estado })
+  function bind(){
+    document.querySelectorAll('[data-field]').forEach(inp=>{
+      inp.oninput=e=>{
+        const i=+e.target.dataset.i, f=e.target.dataset.field;
+        pacientes[i][f] = (f==='ses') ? (parseInt(e.target.value)||0) : e.target.value;
+        if(f==='ses') refreshContador(i);
+        debounced('pac'+i, ()=>guardarPaciente(i));
+      };
     });
-    cargarAsistencia();
-    showToast(estado === 'asistio' ? '✅ Asistió' : estado === 'ausente' ? '❌ Ausente' : '↺ Pendiente');
-  }
-
-  async function agregarManual() {
-    const nombre = document.getElementById('man-nombre').value.trim();
-    const hora = document.getElementById('man-hora').value;
-    const profesional = document.getElementById('man-prof').value;
-    const fecha = document.getElementById('ctrl-fecha').value;
-    if (!nombre || !hora || !fecha) { showToast('⚠️ Completá nombre y hora'); return; }
-    await fetch('/api/asistencia/manual', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
-      body: JSON.stringify({ nombre, profesional, fecha, hora })
+    document.querySelectorAll('.fecha-inp').forEach(inp=>{
+      inp.oninput=e=>{
+        const i=+e.target.dataset.i, c=+e.target.dataset.c;
+        pacientes[i].dias[c].f=e.target.value;
+        refreshContador(i);
+        debounced('ses'+i+'-'+c, ()=>guardarSesion(i,c));
+      };
+      inp.onblur=e=>{
+        const i=+e.target.dataset.i, c=+e.target.dataset.c;
+        const v=e.target.value.trim();
+        if(v.toLowerCase()==='hoy'){
+          pacientes[i].dias[c].f=fechaHoy();
+          guardarSesion(i,c);
+          render();
+        }
+      };
+      inp.onkeydown=e=>{ if(e.key==='Enter') e.target.blur(); };
     });
-    document.getElementById('man-nombre').value = '';
-    cargarAsistencia();
-    showToast('✅ Paciente agregado');
-  }
-
-  async function cerrarDia() {
-    const fecha = document.getElementById('ctrl-fecha').value;
-    if (!confirm(`¿Marcar todos los pendientes del ${fecha} como asistió?`)) return;
-    const r = await fetch('/api/asistencia/cerrar-dia', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
-      body: JSON.stringify({ fecha })
+    document.querySelectorAll('.pay-bar').forEach(bar=>{
+      bar.onclick=e=>{
+        const i=+e.currentTarget.dataset.i, c=+e.currentTarget.dataset.c;
+        const d=pacientes[i].dias[c];
+        if(d.f && d.f.trim()){
+          d.pagada=!d.pagada;
+          guardarSesion(i,c);
+          render();
+        }
+      };
     });
-    const data = await r.json();
-    cargarAsistencia();
-    showToast(`✅ ${data.actualizados} turno(s) marcados`);
   }
 
-  // ─── PACIENTES ────────────────────────────────────────────────────────────
-  let _todosLosPacientes = [];
-
-  async function cargarPacientes() {
-    const prof = document.getElementById('ctrl-prof-pac').value;
-    let url = '/api/pacientes';
-    if (prof !== 'todos') url += `?profesional=${prof}`;
-    const r = await fetch(url, { headers: { 'x-panel-password': password } });
-    const data = await r.json();
-    _todosLosPacientes = data.pacientes || [];
-    const lista = document.getElementById('lista-pacientes');
-    if (!_todosLosPacientes.length) { lista.innerHTML = '<div class="empty">No hay pacientes cargados</div>'; return; }
-
-    const pendientesCompletar = _todosLosPacientes.filter(p => p.sin_completar === 1 || !p.obra_social).length;
-    const avisoHTML = pendientesCompletar > 0
-      ? `<div class="sync-banner" style="display:block; background:var(--amber-50); border-color:#f0c87a; color:var(--amber-800);">⚠️ ${pendientesCompletar} paciente${pendientesCompletar !== 1 ? 's' : ''} se registraron solos al reservar y falta completarles obra social y sesiones.</div>`
-      : '';
-
-    const PROF = { julian:'Julián', mauro:'Mauro', esteban:'Esteban' };
-    lista.innerHTML = _todosLosPacientes.map(p => {
-      const rest = p.sesiones_total - p.sesiones_usadas;
-      const pct = Math.min(100, Math.round((p.sesiones_usadas / p.sesiones_total) * 100));
-      const cl = rest <= 0 ? 'agotado' : rest <= 2 ? 'pocas' : 'ok';
-      const ini = p.nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-      const sinCompletar = p.sin_completar === 1 || !p.obra_social;
-      return `
-        <div class="pac-card${sinCompletar ? ' pac-card-pendiente' : ''}">
-          <div class="pac-top">
-            <div class="pac-avatar">${ini}</div>
-            <div class="pac-info">
-              <div class="pac-nombre">${p.nombre} ${sinCompletar ? '<span class="badge-completar">completar datos</span>' : ''}</div>
-              <div class="pac-sub">${p.obra_social||(sinCompletar ? 'Auto-registrado al reservar' : '')}${p.plan?' · '+p.plan:''} <span class="prof-tag">${PROF[p.profesional]||p.profesional}</span></div>
-            </div>
-            <div class="pac-sesiones">
-              <div class="pac-num ${cl}">${rest}</div>
-              <div class="pac-label">de ${p.sesiones_total}</div>
-            </div>
-          </div>
-          <div class="pac-barra"><div class="pac-barra-fill ${cl}" style="width:${pct}%"></div></div>
-          <div class="pac-actions">
-            <button class="pac-btn pac-btn-sub" onclick="ajustarSesion(${p.id},-1)">− Sesión</button>
-            <button class="pac-btn pac-btn-add" onclick="ajustarSesion(${p.id},+1)">+ Sesión</button>
-            <button class="pac-btn pac-btn-edit" onclick="abrirEditar(${p.id})">Editar</button>
-            <button class="pac-btn pac-btn-del" onclick="eliminarPaciente(${p.id})">Eliminar</button>
-          </div>
-        </div>`;
-    }).join('');
-    lista.innerHTML = avisoHTML + lista.innerHTML;
+  async function addRow(){
+    const r=await fetch('/api/planilla/pacientes',{method:'POST',headers:hdrs(),
+      body:JSON.stringify({nombre:'',obra_social:'',sesiones_autorizadas:10,telefono:'',observaciones:'',profesional:profActual})});
+    const d=await r.json();
+    pacientes.push({id:d.id,n:'',os:'',ses:10,tel:'',obs:'',dias:Array.from({length:NASIST},()=>({f:'',pagada:false}))});
+    render();
+    showSaving();
   }
 
-  async function crearPaciente() {
-    const nombre = document.getElementById('nac-nombre').value.trim();
-    if (!nombre) { showToast('⚠️ Ingresá el nombre'); return; }
-    await fetch('/api/pacientes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
-      body: JSON.stringify({
-        nombre,
-        obra_social: document.getElementById('nac-os').value.trim(),
-        plan: document.getElementById('nac-plan').value.trim(),
-        sesiones_total: parseInt(document.getElementById('nac-sesiones').value),
-        profesional: document.getElementById('nac-prof').value
-      })
-    });
-    document.getElementById('nac-nombre').value = '';
-    document.getElementById('nac-os').value = '';
-    document.getElementById('nac-plan').value = '';
-    cargarPacientes();
-    showToast('✅ Paciente agregado');
-  }
-
-  async function ajustarSesion(id, delta) {
-    const p = _todosLosPacientes.find(x => x.id === id);
-    if (!p) return;
-    const nuevas = Math.max(0, Math.min(p.sesiones_total, p.sesiones_usadas + delta));
-    await fetch(`/api/pacientes/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
-      body: JSON.stringify({ sesiones_usadas: nuevas })
-    });
-    cargarPacientes();
-    showToast(delta > 0 ? '➕ Sesión sumada' : '➖ Sesión restada');
-  }
-
-  function abrirEditar(id) {
-    const p = _todosLosPacientes.find(x => x.id === id);
-    if (!p) return;
-    document.getElementById('edit-id').value = p.id;
-    document.getElementById('edit-nombre').value = p.nombre;
-    document.getElementById('edit-os').value = p.obra_social || '';
-    document.getElementById('edit-plan').value = p.plan || '';
-    document.getElementById('edit-total').value = p.sesiones_total;
-    document.getElementById('edit-usadas').value = p.sesiones_usadas;
-    document.getElementById('edit-prof').value = p.profesional;
-    document.getElementById('modal-editar').classList.add('open');
-  }
-
-  function cerrarModal() { document.getElementById('modal-editar').classList.remove('open'); }
-
-  async function guardarEdicion() {
-    const id = document.getElementById('edit-id').value;
-    await fetch(`/api/pacientes/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-panel-password': password },
-      body: JSON.stringify({
-        nombre: document.getElementById('edit-nombre').value.trim(),
-        obra_social: document.getElementById('edit-os').value.trim(),
-        plan: document.getElementById('edit-plan').value.trim(),
-        sesiones_total: parseInt(document.getElementById('edit-total').value),
-        sesiones_usadas: parseInt(document.getElementById('edit-usadas').value),
-        profesional: document.getElementById('edit-prof').value
-      })
-    });
-    const vinoDeRecientes = document.getElementById('modal-editar').dataset.fromRecientes === '1';
-    document.getElementById('modal-editar').dataset.fromRecientes = '';
-    cerrarModal();
-    if (vinoDeRecientes) { cargarRecientes(); } else { cargarPacientes(); }
-    showToast('✅ Paciente actualizado');
-  }
-
-  async function eliminarPaciente(id) {
-    if (!confirm('¿Eliminar este paciente?')) return;
-    await fetch(`/api/pacientes/${id}`, { method: 'DELETE', headers: { 'x-panel-password': password } });
-    cargarPacientes();
-    showToast('🗑️ Paciente eliminado');
-  }
-
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
+  async function delRow(i){
+    const p=pacientes[i];
+    if(!confirm('¿Eliminar a "'+(p.n||'este paciente')+'" de la planilla?')) return;
+    await fetch('/api/planilla/pacientes/'+p.id,{method:'DELETE',headers:hdrs()});
+    pacientes.splice(i,1);
+    render();
+    showSaving();
   }
 </script>
 </body>
