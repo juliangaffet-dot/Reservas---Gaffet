@@ -48,6 +48,30 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS planilla_pacientes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    obra_social TEXT DEFAULT '',
+    sesiones_autorizadas INTEGER DEFAULT 10,
+    telefono TEXT DEFAULT '',
+    observaciones TEXT DEFAULT '',
+    profesional TEXT NOT NULL DEFAULT 'julian',
+    activo INTEGER NOT NULL DEFAULT 1,
+    creado_en TEXT DEFAULT (datetime('now','-3 hours'))
+  );
+
+  CREATE TABLE IF NOT EXISTS planilla_sesiones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    paciente_id INTEGER NOT NULL,
+    mes TEXT NOT NULL,          -- formato 'YYYY-MM'
+    col INTEGER NOT NULL,       -- posición de la celda 0-9
+    fecha TEXT DEFAULT '',      -- texto libre ej '15-Jul'
+    pagada INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(paciente_id, mes, col)
+  );
+`);
+
 // Migraciones suaves
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN email TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN telefono TEXT`); } catch(e) {}
@@ -594,6 +618,56 @@ app.post('/api/asistencia/cerrar-dia', authPanel, (req, res) => {
     });
   })();
   res.json({ ok: true, actualizados: pendientes.length });
+});
+
+// ─── API PLANILLA DE ASISTENCIA ──────────────────────────────────────────────
+// Listar pacientes de un profesional con sus sesiones del mes
+app.get('/api/planilla', authPanel, (req, res) => {
+  const { profesional, mes } = req.query;
+  if (!profesional || !mes) return res.status(400).json({ error: 'Faltan datos' });
+  const pacs = db.prepare(`SELECT * FROM planilla_pacientes WHERE profesional = ? AND activo = 1 ORDER BY id ASC`).all(profesional);
+  const result = pacs.map(p => {
+    const sesiones = db.prepare(`SELECT col, fecha, pagada FROM planilla_sesiones WHERE paciente_id = ? AND mes = ? ORDER BY col ASC`).all(p.id, mes);
+    return { ...p, sesiones };
+  });
+  res.json({ pacientes: result });
+});
+
+// Crear paciente
+app.post('/api/planilla/pacientes', authPanel, (req, res) => {
+  const { nombre, obra_social, sesiones_autorizadas, telefono, observaciones, profesional } = req.body;
+  if (!profesional) return res.status(400).json({ error: 'Falta profesional' });
+  const r = db.prepare(`INSERT INTO planilla_pacientes (nombre, obra_social, sesiones_autorizadas, telefono, observaciones, profesional) VALUES (?,?,?,?,?,?)`)
+    .run(nombre||'', obra_social||'', parseInt(sesiones_autorizadas)||10, telefono||'', observaciones||'', profesional);
+  res.json({ ok: true, id: r.lastInsertRowid });
+});
+
+// Actualizar datos de paciente
+app.patch('/api/planilla/pacientes/:id', authPanel, (req, res) => {
+  const p = db.prepare('SELECT * FROM planilla_pacientes WHERE id = ?').get(req.params.id);
+  if (!p) return res.status(404).json({ error: 'No encontrado' });
+  const { nombre, obra_social, sesiones_autorizadas, telefono, observaciones } = req.body;
+  db.prepare(`UPDATE planilla_pacientes SET nombre=?, obra_social=?, sesiones_autorizadas=?, telefono=?, observaciones=? WHERE id=?`)
+    .run(nombre??p.nombre, obra_social??p.obra_social, sesiones_autorizadas??p.sesiones_autorizadas, telefono??p.telefono, observaciones??p.observaciones, req.params.id);
+  res.json({ ok: true });
+});
+
+// Eliminar (desactivar) paciente
+app.delete('/api/planilla/pacientes/:id', authPanel, (req, res) => {
+  db.prepare('UPDATE planilla_pacientes SET activo = 0 WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// Guardar/actualizar una celda de sesión (fecha y/o pagada)
+app.put('/api/planilla/sesion', authPanel, (req, res) => {
+  const { paciente_id, mes, col, fecha, pagada } = req.body;
+  if (!paciente_id || !mes || col === undefined) return res.status(400).json({ error: 'Faltan datos' });
+  db.prepare(`
+    INSERT INTO planilla_sesiones (paciente_id, mes, col, fecha, pagada)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(paciente_id, mes, col) DO UPDATE SET fecha = excluded.fecha, pagada = excluded.pagada
+  `).run(paciente_id, mes, col, fecha||'', pagada?1:0);
+  res.json({ ok: true });
 });
 
 app.get('/asistencia', (req, res) => res.sendFile(path.join(__dirname, 'public', 'asistencia.html')));
