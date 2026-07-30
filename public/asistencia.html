@@ -302,8 +302,8 @@
         if(v.toLowerCase()==='hoy'){
           pacientes[i].dias[c].f=fechaHoy();
           guardarSesion(i,c);
-          render();
         }
+        render(); // siempre repintar al salir para mostrar la barrita de pago
       };
       inp.onkeydown=e=>{ if(e.key==='Enter') e.target.blur(); };
     });
