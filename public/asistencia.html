@@ -322,7 +322,7 @@
 
   async function addRow(){
     const r=await fetch('/api/planilla/pacientes',{method:'POST',headers:hdrs(),
-      body:JSON.stringify({nombre:'',obra_social:'',sesiones_autorizadas:10,telefono:'',observaciones:'',profesional:profActual})});
+      body:JSON.stringify({nombre:'',obra_social:'',sesiones_autorizadas:10,telefono:'',observaciones:'',profesional:profActual,mes:mesActual})});
     const d=await r.json();
     pacientes.push({id:d.id,n:'',os:'',ses:10,tel:'',obs:'',dias:Array.from({length:NASIST},()=>({f:'',pagada:false}))});
     render();
