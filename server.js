@@ -73,6 +73,14 @@ db.exec(`
 `);
 
 // Migraciones suaves
+try { db.exec(`ALTER TABLE planilla_pacientes ADD COLUMN mes TEXT`); } catch(e) {}
+// Todos los pacientes de planilla existentes (sin mes) quedan en julio del año actual
+try {
+  const anio = new Date(new Date().getTime() - 3*60*60*1000).getUTCFullYear();
+  db.prepare(`UPDATE planilla_pacientes SET mes = ? WHERE mes IS NULL OR mes = ''`).run(anio + '-07');
+  // Sus sesiones también se mueven a julio (por si se cargaron parado en otro mes)
+  db.prepare(`UPDATE OR IGNORE planilla_sesiones SET mes = ? WHERE paciente_id IN (SELECT id FROM planilla_pacientes WHERE mes = ?)`).run(anio + '-07', anio + '-07');
+} catch(e) { console.error('Migración mes planilla:', e.message); }
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN email TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN telefono TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN sin_completar INTEGER NOT NULL DEFAULT 1`); } catch(e) {}
@@ -625,7 +633,7 @@ app.post('/api/asistencia/cerrar-dia', authPanel, (req, res) => {
 app.get('/api/planilla', authPanel, (req, res) => {
   const { profesional, mes } = req.query;
   if (!profesional || !mes) return res.status(400).json({ error: 'Faltan datos' });
-  const pacs = db.prepare(`SELECT * FROM planilla_pacientes WHERE profesional = ? AND activo = 1 ORDER BY id ASC`).all(profesional);
+  const pacs = db.prepare(`SELECT * FROM planilla_pacientes WHERE profesional = ? AND mes = ? AND activo = 1 ORDER BY id ASC`).all(profesional, mes);
   const result = pacs.map(p => {
     const sesiones = db.prepare(`SELECT col, fecha, pagada FROM planilla_sesiones WHERE paciente_id = ? AND mes = ? ORDER BY col ASC`).all(p.id, mes);
     return { ...p, sesiones };
@@ -635,10 +643,10 @@ app.get('/api/planilla', authPanel, (req, res) => {
 
 // Crear paciente
 app.post('/api/planilla/pacientes', authPanel, (req, res) => {
-  const { nombre, obra_social, sesiones_autorizadas, telefono, observaciones, profesional } = req.body;
-  if (!profesional) return res.status(400).json({ error: 'Falta profesional' });
-  const r = db.prepare(`INSERT INTO planilla_pacientes (nombre, obra_social, sesiones_autorizadas, telefono, observaciones, profesional) VALUES (?,?,?,?,?,?)`)
-    .run(nombre||'', obra_social||'', parseInt(sesiones_autorizadas)||10, telefono||'', observaciones||'', profesional);
+  const { nombre, obra_social, sesiones_autorizadas, telefono, observaciones, profesional, mes } = req.body;
+  if (!profesional || !mes) return res.status(400).json({ error: 'Faltan datos' });
+  const r = db.prepare(`INSERT INTO planilla_pacientes (nombre, obra_social, sesiones_autorizadas, telefono, observaciones, profesional, mes) VALUES (?,?,?,?,?,?,?)`)
+    .run(nombre||'', obra_social||'', parseInt(sesiones_autorizadas)||10, telefono||'', observaciones||'', profesional, mes);
   res.json({ ok: true, id: r.lastInsertRowid });
 });
 
