@@ -43,6 +43,12 @@
   th,td{border:1px solid var(--border);padding:0;text-align:center;}
   thead th{background:var(--green);color:white;font-weight:600;padding:10px 6px;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
   .num-col{width:36px;} .name-col{min-width:170px;text-align:left;}
+  /* Columnas fijas al scrollear horizontalmente */
+  th.num-col, td.num-cell{position:sticky;left:0;z-index:3;}
+  th.name-col{position:sticky;left:36px;z-index:3;}
+  td.name-cell{position:sticky;left:36px;z-index:2;background:white;box-shadow:inset -1px 0 0 var(--border);}
+  thead th.num-col, thead th.name-col{z-index:4;}
+  tr.estado-rojo td.name-cell, tr.estado-normal td.name-cell{background:white;}
   .os-col{min-width:90px;} .ses-col{width:60px;} .tel-col{min-width:115px;}
   .asist-col{width:92px;} .obs-col{min-width:180px;} .del-col{width:36px;}
   tbody td{height:48px;vertical-align:middle;}
