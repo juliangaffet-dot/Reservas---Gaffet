@@ -63,6 +63,9 @@
   .asist.pagada .pay-bar{background:var(--verde);color:white;font-weight:700;}
   .asist.pagada input{background:var(--verde-bg);color:var(--verde-txt);font-weight:600;}
   .asist.empty .pay-bar{visibility:hidden;}
+  td.asist.disabled{background:#3f3f3d;}
+  td.asist.disabled input{background:#3f3f3d;pointer-events:none;}
+  td.asist.disabled .pay-bar{visibility:hidden;}
   .del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;}
   .del-btn:hover{color:var(--rojo);}
   .add-row{padding:12px;text-align:center;}
@@ -229,6 +232,14 @@
         const d=p.dias[c];
         const f=d.f||'';
         const pag=(d.pagada && f)?true:false;
+        // Celdas más allá de las sesiones autorizadas: deshabilitadas (oscuras)
+        if(c >= p.ses){
+          cells+='<td class="asist disabled"><div class="asist-inner">'
+            +'<input value="'+esc(f)+'" disabled>'
+            +'<div class="pay-bar"></div>'
+            +'</div></td>';
+          continue;
+        }
         cells+='<td class="asist'+(pag?' pagada':'')+(f?'':' empty')+'">'
           +'<div class="asist-inner">'
           +'<input class="fecha-inp" value="'+esc(f)+'" data-i="'+i+'" data-c="'+c+'" placeholder="—">'
