@@ -62,7 +62,6 @@
   .pay-bar:hover{background:#e6dfd4;}
   .asist.pagada .pay-bar{background:var(--verde);color:white;font-weight:700;}
   .asist.pagada input{background:var(--verde-bg);color:var(--verde-txt);font-weight:600;}
-  .asist.empty .pay-bar{visibility:hidden;}
   td.asist.disabled{background:#3f3f3d;}
   td.asist.disabled input{background:#3f3f3d;pointer-events:none;}
   td.asist.disabled .pay-bar{visibility:hidden;}
@@ -214,7 +213,7 @@
   }
 
   function contarRealizadas(p){ let n=0; for(const d of p.dias) if(d.f && d.f.trim()) n++; return n; }
-  function contarPagadas(p){ let n=0; for(const d of p.dias) if(d.f && d.f.trim() && d.pagada) n++; return n; }
+  function contarPagadas(p){ let n=0; for(const d of p.dias) if(d.pagada) n++; return n; }
   function esRojo(p){ return contarRealizadas(p) >= p.ses; }
 
   function esc(s){ return (s||'').toString().replace(/"/g,'&quot;'); }
@@ -231,7 +230,7 @@
       for(let c=0;c<NASIST;c++){
         const d=p.dias[c];
         const f=d.f||'';
-        const pag=(d.pagada && f)?true:false;
+        const pag=d.pagada?true:false;
         // Celdas más allá de las sesiones autorizadas: deshabilitadas (oscuras)
         if(c >= p.ses){
           cells+='<td class="asist disabled"><div class="asist-inner">'
@@ -322,11 +321,9 @@
       bar.onclick=e=>{
         const i=+e.currentTarget.dataset.i, c=+e.currentTarget.dataset.c;
         const d=pacientes[i].dias[c];
-        if(d.f && d.f.trim()){
-          d.pagada=!d.pagada;
-          guardarSesion(i,c);
-          render();
-        }
+        d.pagada=!d.pagada;
+        guardarSesion(i,c);
+        render();
       };
     });
   }
