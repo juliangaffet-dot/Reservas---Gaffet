@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Agenda — Kine House</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2D4A3E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Agenda KH">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#faf4f0; --dark:#1C1C1E; --accent:#7b753f; --green:#2D4A3E;
+    --border:#e0d8cf; --muted:#6b6b5a; --verde-bg:#d6ecca;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;}
+  .login-wrap{max-width:340px;margin:16vh auto;text-align:center;padding:0 20px;}
+  .login-logo{width:64px;height:64px;border-radius:14px;background:var(--dark);color:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:22px;margin:0 auto 18px;}
+  .login-wrap h2{font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:16px;}
+  .login-wrap input{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;margin-bottom:10px;}
+  .login-wrap button{width:100%;padding:13px;border:none;border-radius:10px;background:var(--accent);color:white;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;}
+  .login-err{color:#A32D2D;font-size:13px;margin-top:8px;display:none;}
+  #app{display:none;max-width:520px;margin:0 auto;padding:16px;}
+  .hdr{background:var(--green);border-radius:16px;padding:18px 20px;color:white;margin-bottom:14px;}
+  .hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .hdr h1{font-family:'DM Serif Display',serif;font-size:20px;}
+  .hdr .fecha{font-size:13px;color:#9FE1CB;text-transform:capitalize;}
+  .day-nav{display:flex;gap:6px;}
+  .day-nav button{width:30px;height:30px;border:none;border-radius:8px;background:rgba(255,255,255,0.12);color:white;cursor:pointer;font-size:15px;}
+  .hoy-btn{padding:0 10px !important;width:auto !important;font-size:12px !important;font-weight:600;}
+  .ptabs{display:flex;gap:6px;margin-bottom:14px;}
+  .ptab{flex:1;padding:9px 4px;border-radius:10px;border:1px solid var(--border);background:white;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);text-align:center;}
+  .ptab.active{background:var(--green);color:white;border-color:var(--green);}
+  .turno{display:flex;align-items:center;gap:12px;background:white;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+  .turno-hora{font-family:'DM Serif Display',serif;font-size:18px;color:var(--green);min-width:52px;}
+  .turno-info{flex:1;}
+  .turno-nombre{font-weight:600;font-size:14px;}
+  .turno-det{font-size:12px;color:var(--muted);margin-top:1px;}
+  .turno-badge{font-size:10px;padding:3px 8px;border-radius:20px;background:var(--verde-bg);color:#3d6b28;font-weight:700;}
+  .empty{text-align:center;padding:50px 20px;color:var(--muted);}
+  .empty .ico{font-size:40px;margin-bottom:10px;}
+  .resumen{display:flex;gap:8px;margin-bottom:14px;}
+  .res-card{flex:1;background:white;border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
+  .res-num{font-family:'DM Serif Display',serif;font-size:24px;color:var(--green);}
+  .res-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .refresh-note{text-align:center;font-size:11px;color:#b5ad9e;margin-top:16px;}
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="login">
+  <div class="login-logo">KH</div>
+  <h2>Agenda del día</h2>
+  <input type="password" id="pass" placeholder="Contraseña del equipo" onkeydown="if(event.key==='Enter')login()">
+  <button onclick="login()">Ingresar</button>
+  <div class="login-err" id="login-err">Contraseña incorrecta</div>
+</div>
+
+<div id="app">
+  <div class="hdr">
+    <div class="hdr-top">
+      <h1>Agenda</h1>
+      <div class="day-nav">
+        <button onclick="cambiarDia(-1)">‹</button>
+        <button class="hoy-btn" onclick="irHoy()">Hoy</button>
+        <button onclick="cambiarDia(1)">›</button>
+      </div>
+    </div>
+    <div class="fecha" id="fecha-label"></div>
+  </div>
+
+  <div class="ptabs">
+    <div class="ptab active" data-prof="julian" onclick="setProf('julian',this)">Julián</div>
+    <div class="ptab" data-prof="mauro" onclick="setProf('mauro',this)">Mauro</div>
+    <div class="ptab" data-prof="esteban" onclick="setProf('esteban',this)">Esteban</div>
+  </div>
+
+  <div class="resumen">
+    <div class="res-card"><div class="res-num" id="res-total">–</div><div class="res-lbl">Turnos</div></div>
+    <div class="res-card"><div class="res-num" id="res-prox">–</div><div class="res-lbl">Próximo</div></div>
+  </div>
+
+  <div id="lista"></div>
+  <div class="refresh-note">Se actualiza solo cada 2 minutos</div>
+</div>
+
+<script>
+  let PASSWORD='';
+  let profActual='julian';
+  let fechaActual=hoyISO();
+
+  function hoyISO(){
+    const d=new Date(new Date().getTime() - 3*60*60*1000);
+    return d.toISOString().substring(0,10);
+  }
+  function fmtFecha(iso){
+    const d=new Date(iso+'T12:00:00');
+    const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return dias[d.getDay()]+' '+d.getDate()+' de '+meses[d.getMonth()];
+  }
+
+  async function login(){
+    const p=document.getElementById('pass').value;
+    const r=await fetch('/api/asistencia?fecha='+fechaActual+'&profesional=julian',{headers:{'x-panel-password':p}});
+    if(r.ok){
+      PASSWORD=p;
+      try{ localStorage.setItem('kh_panel_pass',p); }catch(e){}
+      arrancar();
+    } else {
+      document.getElementById('login-err').style.display='block';
+    }
+  }
+  (async ()=>{
+    try{
+      const saved=localStorage.getItem('kh_panel_pass');
+      if(saved){
+        const r=await fetch('/api/asistencia?fecha='+fechaActual+'&profesional=julian',{headers:{'x-panel-password':saved}});
+        if(r.ok){ PASSWORD=saved; arrancar(); }
+      }
+    }catch(e){}
+  })();
+
+  function arrancar(){
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    cargar();
+    setInterval(cargar, 2*60*1000);
+  }
+
+  function setProf(p, el){
+    profActual=p;
+    document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    cargar();
+  }
+  function cambiarDia(n){
+    const d=new Date(fechaActual+'T12:00:00');
+    d.setDate(d.getDate()+n);
+    fechaActual=d.toISOString().substring(0,10);
+    cargar();
+  }
+  function irHoy(){ fechaActual=hoyISO(); cargar(); }
+
+  async function cargar(){
+    document.getElementById('fecha-label').textContent=fmtFecha(fechaActual);
+    const r=await fetch('/api/asistencia?fecha='+fechaActual+'&profesional='+profActual,{headers:{'x-panel-password':PASSWORD}});
+    if(!r.ok) return;
+    const data=await r.json();
+    const turnos=(data.turnos||[]).filter(t=>t.estado!=='cancelado');
+    render(turnos);
+  }
+
+  function render(turnos){
+    const lista=document.getElementById('lista');
+    document.getElementById('res-total').textContent=turnos.length;
+
+    // próximo turno (solo si es hoy)
+    let prox='–';
+    if(fechaActual===hoyISO()){
+      const ahora=new Date(new Date().getTime()-3*60*60*1000);
+      const hhmm=String(ahora.getUTCHours()).padStart(2,'0')+':'+String(ahora.getUTCMinutes()).padStart(2,'0');
+      const siguiente=turnos.find(t=>t.hora>=hhmm);
+      if(siguiente) prox=siguiente.hora;
+    }
+    document.getElementById('res-prox').textContent=prox;
+
+    if(!turnos.length){
+      lista.innerHTML='<div class="empty"><div class="ico">🗓</div>No hay turnos para este día</div>';
+      return;
+    }
+    lista.innerHTML=turnos.map(t=>{
+      const det=[t.telefono, t.acompanante?('+ '+t.acompanante):''].filter(Boolean).join(' · ');
+      return '<div class="turno">'
+        +'<div class="turno-hora">'+t.hora+'</div>'
+        +'<div class="turno-info"><div class="turno-nombre">'+t.nombre+'</div>'
+        +(det?'<div class="turno-det">'+det+'</div>':'')
+        +'</div>'
+        +(t.estado==='asistio'?'<span class="turno-badge">✓ asistió</span>':'')
+        +'</div>';
+    }).join('');
+  }
+</script>
+</body>
+</html>
