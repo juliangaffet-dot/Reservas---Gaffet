@@ -679,6 +679,7 @@ app.put('/api/planilla/sesion', authPanel, (req, res) => {
 });
 
 app.get('/asistencia', (req, res) => res.sendFile(path.join(__dirname, 'public', 'asistencia.html')));
+app.get('/agenda', (req, res) => res.sendFile(path.join(__dirname, 'public', 'agenda.html')));
 app.get('/inicio', (req, res) => res.sendFile(path.join(__dirname, 'public', 'inicio.html')));
 app.get('/staff', (req, res) => res.sendFile(path.join(__dirname, 'public', 'staff.html')));
 
