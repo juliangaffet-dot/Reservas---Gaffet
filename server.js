@@ -6,7 +6,7 @@ const Database = require('better-sqlite3');
 const crypto = require('crypto');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '14mb' }));
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -85,6 +85,86 @@ try { db.exec(`ALTER TABLE pacientes ADD COLUMN email TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN telefono TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE pacientes ADD COLUMN sin_completar INTEGER NOT NULL DEFAULT 1`); } catch(e) {}
 try { db.exec(`ALTER TABLE turnos ADD COLUMN cancel_token TEXT`); } catch(e) {}
+
+// ─── WEB EDITABLE (landing administrable) ─────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS web_config (
+    clave TEXT PRIMARY KEY,
+    valor TEXT
+  );
+  CREATE TABLE IF NOT EXISTS web_media (
+    clave TEXT PRIMARY KEY,       -- 'logo' | 'hero' | 'nosotros'
+    mime TEXT,
+    datos TEXT,                   -- base64 (sin el prefijo data:)
+    actualizado TEXT DEFAULT (datetime('now','-3 hours'))
+  );
+`);
+
+// Config por defecto (se usa si el admin todavía no guardó nada)
+const DEFAULT_WEB = {
+  color: "#8a8c52",
+  hero: {
+    tag: "Salta \u00b7 Kinesiolog\u00eda & Fisioterapia",
+    titulo: "Volv\u00e9 a moverte",
+    destacado: "sin l\u00edmites",
+    sub: "Tratamientos a medida, con experiencia cl\u00ednica y un trato cercano."
+  },
+  servicios: {
+    visible: true,
+    titulo: "Servicios pensados para vos",
+    sub: "Cada tratamiento se dise\u00f1a a partir de una evaluaci\u00f3n y de tus objetivos.",
+    items: [
+      { icono: "\ud83e\uddb4", nombre: "Kinesiolog\u00eda y Fisioterapia", desc: "Evaluaci\u00f3n y tratamiento del dolor y las lesiones para devolverte la funcionalidad." },
+      { icono: "\ud83c\udfc3", nombre: "Readaptaci\u00f3n F\u00edsica", desc: "El puente entre la lesi\u00f3n y tu vuelta a la actividad, con progresi\u00f3n segura." },
+      { icono: "\ud83d\udcaa", nombre: "Rehabilitaci\u00f3n Deportiva", desc: "Volv\u00e9 a competir con confianza, con un plan orientado a tu deporte." },
+      { icono: "\ud83d\udccb", nombre: "Planes personalizados", desc: "Rutinas a medida que segu\u00eds en el centro, en casa o el gimnasio, con seguimiento." }
+    ]
+  },
+  nosotros: {
+    visible: true,
+    titulo: "Recuperaci\u00f3n con acompa\u00f1amiento real",
+    p1: "Somos un equipo de kinesi\u00f3logos especializados en rehabilitaci\u00f3n f\u00edsica y readaptaci\u00f3n deportiva. Combinamos experiencia cl\u00ednica con un trato cercano.",
+    p2: "Dise\u00f1amos cada tratamiento a medida y te acompa\u00f1amos en cada etapa del proceso."
+  },
+  equipo: {
+    visible: true,
+    titulo: "Profesionales matriculados",
+    items: [
+      { iniciales: "JG", nombre: "Lic. Juli\u00e1n Gaffet", rol: "Kinesi\u00f3logo", mp: "M.P. 1321" },
+      { iniciales: "MA", nombre: "Lic. Mauro Ayub", rol: "Kinesi\u00f3logo", mp: "M.P. 1263" },
+      { iniciales: "EV", nombre: "Lic. Esteban Videla", rol: "Kinesi\u00f3logo", mp: "M.P. 1337" }
+    ]
+  },
+  ubicacion: {
+    visible: true,
+    direccion: "Cmte. Piedrabuena 820",
+    ciudad: "Salta, Argentina",
+    maps: "https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5"
+  },
+  cta: {
+    titulo: "\u00bfListo para empezar?",
+    sub: "Reserv\u00e1 tu sesi\u00f3n online en pocos pasos. Eleg\u00ed profesional, d\u00eda y horario."
+  }
+};
+
+function getWebConfig() {
+  const row = db.prepare("SELECT valor FROM web_config WHERE clave = 'landing'").get();
+  if (!row) return JSON.parse(JSON.stringify(DEFAULT_WEB));
+  try {
+    const saved = JSON.parse(row.valor);
+    // merge superficial con defaults por si se agregan campos nuevos
+    return Object.assign(JSON.parse(JSON.stringify(DEFAULT_WEB)), saved);
+  } catch(e) { return JSON.parse(JSON.stringify(DEFAULT_WEB)); }
+}
+
+function setWebConfig(cfg) {
+  db.prepare("INSERT INTO web_config (clave, valor) VALUES ('landing', ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor")
+    .run(JSON.stringify(cfg));
+}
+
+function hasMedia(clave) {
+  return !!db.prepare("SELECT 1 FROM web_media WHERE clave = ?").get(clave);
+}
 
 // ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
 const CLIENT_ID      = process.env.GOOGLE_CLIENT_ID;
@@ -678,9 +758,291 @@ app.put('/api/planilla/sesion', authPanel, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── HELPERS DE COLOR Y ESCAPE ───────────────────────────────────────────────
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function darken(hex, f){
+  // f: 0..1 cuánto oscurecer
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex||'').trim());
+  if(!m) return '#56583a';
+  let r=parseInt(m[1],16), g=parseInt(m[2],16), b=parseInt(m[3],16);
+  r=Math.round(r*(1-f)); g=Math.round(g*(1-f)); b=Math.round(b*(1-f));
+  const h=n=>('0'+n.toString(16)).slice(-2);
+  return '#'+h(r)+h(g)+h(b);
+}
+
+// ─── RENDER DE LA LANDING DESDE LA CONFIG ────────────────────────────────────
+function renderLanding(cfg){
+  const olive = (cfg.color && /^#?[a-f\d]{6}$/i.test(cfg.color.replace('#',''))) ? (cfg.color[0]==='#'?cfg.color:'#'+cfg.color) : '#8a8c52';
+  const oliveDark = darken(olive, 0.28);
+  const oliveDeep = darken(olive, 0.48);
+  const logoSrc = hasMedia('logo') ? '/media/logo' : '/03%20KINE%20ISO%20COMBINADO.png';
+  const heroHas = hasMedia('hero');
+  const nosHas  = hasMedia('nosotros');
+
+  const h = cfg.hero||{}, se=cfg.servicios||{}, no=cfg.nosotros||{}, eq=cfg.equipo||{}, ub=cfg.ubicacion||{}, ct=cfg.cta||{};
+
+  const servItems = (se.items||[]).map((it,i)=>`
+        <div class="scard"><div class="ic">${esc(it.icono)}</div><h3>${esc(it.nombre)}</h3><p>${esc(it.desc)}</p><div class="arrow">→</div></div>`);
+  // agrupar en filas de 2
+  let servRows='';
+  for(let i=0;i<servItems.length;i+=2){ servRows+=`<div class="brow">${servItems.slice(i,i+2).join('')}</div>`; }
+
+  const teamItems = (eq.items||[]).map(m=>`
+        <div class="tmember"><div class="tavatar">${esc(m.iniciales)}</div><h3>${esc(m.nombre)}</h3><div class="role">${esc(m.rol)}</div><span class="mp">${esc(m.mp)}</span></div>`).join('');
+
+  const secServicios = se.visible===false ? '' : `
+  <section class="section" id="servicios">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><span class="tag"><span class="dot"></span> Qué hacemos</span>
+          <h2 class="sec-title" style="margin-top:14px;">${esc(se.titulo)}</h2></div>
+        <p class="sec-sub">${esc(se.sub)}</p>
+      </div>
+      ${servRows}
+    </div>
+  </section>`;
+
+  const secNosotros = no.visible===false ? '' : `
+  <section class="section" style="padding-top:0;">
+    <div class="wrap">
+      <div class="about">
+        <div class="about-txt">
+          <span class="tag"><span class="dot"></span> Quiénes somos</span>
+          <h2>${esc(no.titulo)}</h2>
+          <p>${esc(no.p1)}</p>
+          <p>${esc(no.p2)}</p>
+        </div>
+        <div class="about-visual" style="${nosHas?`background-image:url(/media/nosotros);background-size:cover;background-position:center;`:''}">
+          ${nosHas?'':`<div class="ph"><img src="${logoSrc}" alt=""><span>Foto del equipo</span></div>`}
+        </div>
+      </div>
+    </div>
+  </section>`;
+
+  const secEquipo = eq.visible===false ? '' : `
+  <section class="section" style="padding-top:0;">
+    <div class="wrap">
+      <div class="sec-head"><div><span class="tag"><span class="dot"></span> Nuestro equipo</span>
+        <h2 class="sec-title" style="margin-top:14px;">${esc(eq.titulo)}</h2></div></div>
+      <div class="team-grid">${teamItems}</div>
+    </div>
+  </section>`;
+
+  const secUbic = ub.visible===false ? '' : `
+        <div class="close-loc">
+          <span class="tag"><span class="dot"></span> Ubicación</span>
+          <div class="addr">${esc(ub.direccion)}</div>
+          <div class="city">${esc(ub.ciudad)}</div>
+          <a href="${esc(ub.maps)}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Ver en Google Maps ↗</a>
+        </div>`;
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="${oliveDeep}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kine House">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <title>Kine House — Centro de Kinesiología y Fisioterapia</title>
+  <meta property="og:title" content="Kine House">
+  <meta property="og:description" content="Centro de Kinesiología y Fisioterapia · Readaptación Física en Salta">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#faf8f4; --bg-2:#f4f0e8; --card:#ffffff;
+      --olive:${olive}; --olive-dark:${oliveDark}; --olive-deep:${oliveDeep};
+      --ink:#26261f; --muted:#8a877a; --line:#ece7db; --accent:#c7643c;
+      --display:'Space Grotesk',sans-serif; --sans:'DM Sans',sans-serif; --r:22px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+    a{color:inherit;text-decoration:none;} img{max-width:100%;display:block;}
+    .wrap{max-width:1120px;margin:0 auto;padding:0 22px;}
+    .tag{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:99px;background:rgba(138,140,82,0.12);color:var(--olive-dark);}
+    .tag .dot{width:6px;height:6px;border-radius:50%;background:var(--olive);}
+    .nav{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:100;width:calc(100% - 28px);max-width:1120px;display:flex;align-items:center;justify-content:space-between;padding:11px 12px 11px 20px;background:rgba(255,255,255,0.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:99px;box-shadow:0 6px 24px rgba(74,76,44,0.06);}
+    .nav-brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:18px;font-weight:600;color:var(--ink);}
+    .nav-brand .iso{width:30px;height:30px;border-radius:9px;object-fit:contain;background:#fff;padding:2px;border:1px solid var(--line);}
+    .nav-right{display:flex;align-items:center;gap:6px;}
+    .nav-link{font-size:14px;font-weight:500;color:var(--muted);padding:9px 14px;border-radius:99px;transition:.15s;}
+    .nav-link:hover{color:var(--ink);background:var(--bg-2);}
+    .nav-cta{font-size:14px;font-weight:600;color:#fff;background:var(--ink);padding:11px 20px;border-radius:99px;transition:.15s;}
+    .nav-cta:hover{background:var(--olive-dark);}
+    @media(max-width:640px){ .nav-link.hs{display:none;} }
+    .hero{position:relative;min-height:88vh;display:flex;align-items:flex-end;overflow:hidden;}
+    .hero-photo{position:absolute;inset:0;background:linear-gradient(150deg,var(--olive) 0%,var(--olive-deep) 100%);${heroHas?`background-image:url(/media/hero);background-size:cover;background-position:center;`:''}}
+    .hero-photo .hero-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:rgba(255,255,255,0.4);}
+    .hero-photo .hero-ph img{width:120px;filter:brightness(0) invert(1);opacity:0.5;}
+    .hero-photo .hero-ph span{font-size:12px;letter-spacing:0.18em;text-transform:uppercase;}
+    .hero-overlay{position:absolute;inset:0;background:linear-gradient(to top, rgba(30,30,24,0.78) 0%, rgba(30,30,24,0.35) 45%, rgba(30,30,24,0.15) 100%);}
+    .hero-content{position:relative;z-index:2;padding-bottom:74px;padding-top:140px;color:#fff;max-width:1120px;}
+    .hero-content .tag.light{background:rgba(255,255,255,0.16);color:#fff;}
+    .hero-content .tag.light .dot{background:#fff;}
+    .hero-content h1{font-family:var(--display);font-weight:600;font-size:64px;line-height:1.0;letter-spacing:-0.03em;margin:22px 0 18px;color:#fff;}
+    .hero-content h1 .hl{color:#e7e4c8;}
+    .hero-content p{font-size:19px;color:rgba(255,255,255,0.85);max-width:460px;font-weight:300;margin-bottom:34px;}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+    .btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--sans);font-size:16px;font-weight:600;padding:15px 30px;border-radius:99px;cursor:pointer;transition:.15s;border:none;}
+    .btn-primary{background:#fff;color:var(--ink);box-shadow:0 10px 26px rgba(0,0,0,0.18);}
+    .btn-primary:hover{background:var(--bg-2);transform:translateY(-2px);}
+    .btn-light{background:rgba(255,255,255,0.14);color:#fff;border:1.5px solid rgba(255,255,255,0.35);}
+    .btn-light:hover{background:rgba(255,255,255,0.24);}
+    .btn-ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);}
+    .btn-ghost:hover{border-color:var(--olive);}
+    @media(max-width:640px){ .hero-content h1{font-size:42px;} .hero{min-height:82vh;} .hero-content{padding-bottom:52px;} }
+    .section{padding:88px 0;}
+    .sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:40px;flex-wrap:wrap;}
+    .sec-title{font-family:var(--display);font-weight:600;font-size:36px;line-height:1.08;letter-spacing:-0.02em;}
+    .sec-sub{color:var(--muted);max-width:400px;font-weight:300;}
+    @media(max-width:640px){ .section{padding:60px 0;} .sec-title{font-size:28px;} }
+    .brow{display:flex;justify-content:space-between;margin-bottom:16px;}
+    .scard{width:48.5%;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:30px 28px;transition:.2s;position:relative;overflow:hidden;}
+    .scard:hover{transform:translateY(-5px);box-shadow:0 20px 44px rgba(74,76,44,0.10);border-color:transparent;}
+    .scard .ic{width:52px;height:52px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:25px;margin-bottom:18px;background:rgba(138,140,82,0.13);}
+    .scard h3{font-family:var(--display);font-size:20px;font-weight:600;margin-bottom:8px;}
+    .scard p{font-size:14.5px;color:var(--muted);font-weight:300;line-height:1.6;}
+    .scard .arrow{margin-top:14px;color:var(--olive);font-size:20px;opacity:0;transform:translateX(-6px);transition:.2s;}
+    .scard:hover .arrow{opacity:1;transform:translateX(0);}
+    @media(max-width:680px){ .brow{flex-direction:column;} .scard{width:100%;margin-bottom:16px;} }
+    .about{background:var(--bg-2);border-radius:34px;padding:56px 52px;display:flex;justify-content:space-between;align-items:center;}
+    .about-txt{width:54%;}
+    .about-txt h2{font-family:var(--display);font-weight:600;font-size:32px;letter-spacing:-0.02em;margin:14px 0 16px;line-height:1.12;}
+    .about-txt p{color:var(--muted);font-weight:300;margin-bottom:14px;}
+    .about-visual{width:40%;height:300px;border-radius:24px;background:linear-gradient(150deg,var(--olive),var(--olive-deep));position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 20px 50px rgba(74,76,44,0.18);}
+    .about-visual .ph{color:rgba(255,255,255,0.6);text-align:center;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;}
+    .about-visual .ph img{width:80px;margin:0 auto 10px;filter:brightness(0) invert(1);opacity:.85;}
+    @media(max-width:820px){ .about{flex-direction:column;padding:38px 26px;} .about-txt{width:100%;margin-bottom:24px;} .about-visual{width:100%;height:220px;} }
+    .team-grid{display:flex;justify-content:space-between;}
+    .tmember{width:32%;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:30px 24px;text-align:center;transition:.2s;}
+    .tmember:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(74,76,44,0.10);}
+    .tavatar{width:78px;height:78px;border-radius:24px;margin:0 auto 16px;background:linear-gradient(145deg,var(--olive),var(--olive-dark));display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;font-weight:600;color:#fff;}
+    .tmember h3{font-family:var(--display);font-size:18px;font-weight:600;margin-bottom:3px;}
+    .tmember .role{font-size:13px;color:var(--muted);margin-bottom:10px;}
+    .tmember .mp{display:inline-block;font-size:12px;font-weight:600;color:var(--olive-dark);background:rgba(138,140,82,0.12);border-radius:99px;padding:4px 13px;}
+    @media(max-width:720px){ .team-grid{flex-direction:column;} .tmember{width:100%;margin-bottom:14px;} }
+    .close{display:flex;justify-content:space-between;}
+    .close-cta{width:57%;background:linear-gradient(150deg,var(--ink),var(--olive-deep));color:#fff;border-radius:30px;padding:52px 46px;position:relative;overflow:hidden;}
+    .close-cta .blob{position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(199,100,60,0.25);top:-70px;right:-50px;filter:blur(6px);}
+    .close-cta h2{font-family:var(--display);font-weight:600;font-size:34px;letter-spacing:-0.02em;margin-bottom:12px;position:relative;line-height:1.1;}
+    .close-cta p{color:rgba(255,255,255,0.75);font-weight:300;margin-bottom:28px;position:relative;}
+    .close-cta .btn-primary{background:#fff;color:var(--ink);position:relative;}
+    .close-loc{width:40%;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:40px 34px;display:flex;flex-direction:column;justify-content:center;}
+    .close-loc .tag{margin-bottom:16px;} .close-loc .addr{font-family:var(--display);font-size:22px;font-weight:600;margin-bottom:4px;} .close-loc .city{color:var(--muted);margin-bottom:22px;}
+    @media(max-width:760px){ .close{flex-direction:column;} .close-cta,.close-loc{width:100%;padding:36px 28px;margin-bottom:16px;} .close-cta h2{font-size:28px;} }
+    .footer{padding:50px 0 40px;border-top:1px solid var(--line);margin-top:80px;}
+    .footer-inner{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px;align-items:center;}
+    .footer-brand{display:flex;align-items:center;gap:11px;font-family:var(--display);font-size:19px;font-weight:600;}
+    .footer-brand .iso{width:34px;height:34px;border-radius:9px;background:#fff;padding:2px;border:1px solid var(--line);object-fit:contain;}
+    .footer-links{display:flex;gap:22px;flex-wrap:wrap;font-size:14px;color:var(--muted);}
+    .footer-links a:hover{color:var(--ink);}
+    .footer-copy{width:100%;margin-top:26px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="#top" class="nav-brand"><img class="iso" src="${logoSrc}" alt="">Kine House</a>
+    <div class="nav-right">
+      ${se.visible===false?'':'<a href="#servicios" class="nav-link hs">Servicios</a>'}
+      <a href="/staff" class="nav-link hs">Equipo</a>
+      <a href="/" class="nav-cta">Agendar turno</a>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="hero-photo">${heroHas?'':`<div class="hero-ph"><img src="${logoSrc}" alt=""><span>Foto del centro</span></div>`}</div>
+    <div class="hero-overlay"></div>
+    <div class="wrap hero-content">
+      <span class="tag light"><span class="dot"></span> ${esc(h.tag)}</span>
+      <h1>${esc(h.titulo)}<br><span class="hl">${esc(h.destacado)}</span></h1>
+      <p>${esc(h.sub)}</p>
+      <div class="hero-actions">
+        <a href="/" class="btn btn-primary">Agendar un turno →</a>
+        ${se.visible===false?'':'<a href="#servicios" class="btn btn-light">Ver servicios</a>'}
+      </div>
+    </div>
+  </header>
+${secServicios}
+${secNosotros}
+${secEquipo}
+  <section class="section" style="padding-top:0;" id="agendar">
+    <div class="wrap">
+      <div class="close">
+        <div class="close-cta">
+          <span class="blob"></span>
+          <h2>${esc(ct.titulo)}</h2>
+          <p>${esc(ct.sub)}</p>
+          <a href="/" class="btn btn-primary">Agendar un turno →</a>
+        </div>
+${secUbic}
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-inner">
+        <a href="#top" class="footer-brand"><img class="iso" src="${logoSrc}" alt="">Kine House</a>
+        <div class="footer-links">
+          ${se.visible===false?'':'<a href="#servicios">Servicios</a>'}
+          <a href="/">Agendar turno</a>
+          <a href="/staff">Acceso equipo</a>
+          ${ub.visible===false?'':`<a href="${esc(ub.maps)}" target="_blank" rel="noopener noreferrer">Ubicación</a>`}
+        </div>
+      </div>
+      <div class="footer-copy">
+        <span>© <span id="yr"></span> Kine House · Rehabilitación &amp; Movimiento</span>
+        <span>${esc(ub.direccion)}, ${esc(ub.ciudad)}</span>
+      </div>
+    </div>
+  </footer>
+  <script>
+    document.getElementById('yr').textContent = new Date().getFullYear();
+    if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(()=>{}); }); }
+  </script>
+</body>
+</html>`;
+}
+
+// ─── ENDPOINTS WEB ───────────────────────────────────────────────────────────
+app.get('/api/web', (req, res) => { res.json(getWebConfig()); });
+
+app.post('/api/web', authPanel, (req, res) => {
+  try { setWebConfig(req.body || {}); res.json({ ok: true }); }
+  catch(e){ res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/web/upload', authPanel, (req, res) => {
+  const { clave, dataUri } = req.body || {};
+  if (!['logo','hero','nosotros'].includes(clave)) return res.status(400).json({ error: 'Clave inválida' });
+  const m = /^data:([^;]+);base64,(.+)$/.exec(dataUri||'');
+  if (!m) return res.status(400).json({ error: 'Imagen inválida' });
+  db.prepare("INSERT INTO web_media (clave, mime, datos, actualizado) VALUES (?,?,?,datetime('now','-3 hours')) ON CONFLICT(clave) DO UPDATE SET mime=excluded.mime, datos=excluded.datos, actualizado=excluded.actualizado")
+    .run(clave, m[1], m[2]);
+  res.json({ ok: true });
+});
+
+app.delete('/api/web/upload/:clave', authPanel, (req, res) => {
+  db.prepare("DELETE FROM web_media WHERE clave = ?").run(req.params.clave);
+  res.json({ ok: true });
+});
+
+app.get('/media/:clave', (req, res) => {
+  const row = db.prepare("SELECT mime, datos FROM web_media WHERE clave = ?").get(req.params.clave);
+  if (!row) return res.status(404).send('Sin imagen');
+  res.set('Content-Type', row.mime);
+  res.set('Cache-Control', 'no-cache');
+  res.send(Buffer.from(row.datos, 'base64'));
+});
+
 app.get('/asistencia', (req, res) => res.sendFile(path.join(__dirname, 'public', 'asistencia.html')));
 app.get('/agenda', (req, res) => res.sendFile(path.join(__dirname, 'public', 'agenda.html')));
-app.get('/inicio', (req, res) => res.sendFile(path.join(__dirname, 'public', 'inicio.html')));
+app.get('/inicio', (req, res) => { res.set('Cache-Control','no-cache'); res.send(renderLanding(getWebConfig())); });
+app.get('/admin-web', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin-web.html')));
 app.get('/staff', (req, res) => res.sendFile(path.join(__dirname, 'public', 'staff.html')));
 
 const PORT = process.env.PORT || 3000;
