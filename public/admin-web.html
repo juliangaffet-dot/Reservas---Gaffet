@@ -247,6 +247,11 @@ function renderEquipo(items){
       <label>WhatsApp / Teléfono</label>
       <input type="text" value="${esc(m.tel)}" oninput="setMiem(${i},'tel',this.value)" placeholder="Ej: 54 9 387 5123456">
       <div class="muted-note">Con código de país y área. Para Argentina: 54 9 + área sin 0 + número sin 15. Dejalo vacío si no querés mostrar contacto.</div>
+      <label style="margin-top:14px;">Foto del profesional</label>
+      <div class="imgrow">
+        <img class="imgprev" id="prev-equipo-${i}" src="/media/equipo-${i}?t=${Date.now()}" onerror="this.style.opacity=.35">
+        <div><input type="file" accept="image/*" onchange="subirImg('equipo-${i}', this)"><div class="muted-note">Opcional. Si no subís foto, se muestran las iniciales.</div></div>
+      </div>
     </div>`).join('');
 }
 function setMiem(i,k,v){ cfg.equipo.items[i][k]=v; }
