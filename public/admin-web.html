@@ -244,11 +244,14 @@ function renderEquipo(items){
         <div><label>Rol</label><input type="text" value="${esc(m.rol)}" oninput="setMiem(${i},'rol',this.value)"></div>
         <div><label>Matrícula</label><input type="text" value="${esc(m.mp)}" oninput="setMiem(${i},'mp',this.value)"></div>
       </div>
+      <label>WhatsApp / Teléfono</label>
+      <input type="text" value="${esc(m.tel)}" oninput="setMiem(${i},'tel',this.value)" placeholder="Ej: 54 9 387 5123456">
+      <div class="muted-note">Con código de país y área. Para Argentina: 54 9 + área sin 0 + número sin 15. Dejalo vacío si no querés mostrar contacto.</div>
     </div>`).join('');
 }
 function setMiem(i,k,v){ cfg.equipo.items[i][k]=v; }
 function rmMiembro(i){ cfg.equipo.items.splice(i,1); renderEquipo(cfg.equipo.items); }
-function addMiembro(){ if(!cfg.equipo.items)cfg.equipo.items=[]; cfg.equipo.items.push({iniciales:'',nombre:'',rol:'Kinesiólogo',mp:''}); renderEquipo(cfg.equipo.items); }
+function addMiembro(){ if(!cfg.equipo.items)cfg.equipo.items=[]; cfg.equipo.items.push({iniciales:'',nombre:'',rol:'Kinesiólogo',mp:'',tel:''}); renderEquipo(cfg.equipo.items); }
 
 function recolectar(){
   cfg.color = val('colorTxt') || val('color');
