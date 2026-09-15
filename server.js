@@ -797,8 +797,11 @@ function renderLanding(cfg){
               <a href="https://wa.me/${tel}" target="_blank" rel="noopener noreferrer" class="tcopt wa">💬 WhatsApp</a>
             </div>
           </div>` : '';
+    const avatar = hasMedia('equipo-'+i)
+      ? `<div class="tavatar" style="background-image:url(/media/equipo-${i});background-size:cover;background-position:center;"></div>`
+      : `<div class="tavatar">${esc(m.iniciales)}</div>`;
     return `
-        <div class="tmember"><div class="tavatar">${esc(m.iniciales)}</div><h3>${esc(m.nombre)}</h3><div class="role">${esc(m.rol)}</div><span class="mp">${esc(m.mp)}</span>${contacto}</div>`;
+        <div class="tmember">${avatar}<h3>${esc(m.nombre)}</h3><div class="role">${esc(m.rol)}</div><span class="mp">${esc(m.mp)}</span>${contacto}</div>`;
   }).join('');
 
   const secServicios = se.visible===false ? '' : `
@@ -1046,7 +1049,7 @@ app.post('/api/web', authPanel, (req, res) => {
 
 app.post('/api/web/upload', authPanel, (req, res) => {
   const { clave, dataUri } = req.body || {};
-  if (!['logo','hero','nosotros'].includes(clave)) return res.status(400).json({ error: 'Clave inválida' });
+  if (!/^(logo|hero|nosotros|equipo-\d+)$/.test(clave)) return res.status(400).json({ error: 'Clave inválida' });
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUri||'');
   if (!m) return res.status(400).json({ error: 'Imagen inválida' });
   db.prepare("INSERT INTO web_media (clave, mime, datos, actualizado) VALUES (?,?,?,datetime('now','-3 hours')) ON CONFLICT(clave) DO UPDATE SET mime=excluded.mime, datos=excluded.datos, actualizado=excluded.actualizado")
