@@ -130,9 +130,9 @@ const DEFAULT_WEB = {
     visible: true,
     titulo: "Profesionales matriculados",
     items: [
-      { iniciales: "JG", nombre: "Lic. Juli\u00e1n Gaffet", rol: "Kinesi\u00f3logo", mp: "M.P. 1321" },
-      { iniciales: "MA", nombre: "Lic. Mauro Ayub", rol: "Kinesi\u00f3logo", mp: "M.P. 1263" },
-      { iniciales: "EV", nombre: "Lic. Esteban Videla", rol: "Kinesi\u00f3logo", mp: "M.P. 1337" }
+      { iniciales: "JG", nombre: "Lic. Juli\u00e1n Gaffet", rol: "Kinesi\u00f3logo", mp: "M.P. 1321", tel: "" },
+      { iniciales: "MA", nombre: "Lic. Mauro Ayub", rol: "Kinesi\u00f3logo", mp: "M.P. 1263", tel: "" },
+      { iniciales: "EV", nombre: "Lic. Esteban Videla", rol: "Kinesi\u00f3logo", mp: "M.P. 1337", tel: "" }
     ]
   },
   ubicacion: {
@@ -787,8 +787,19 @@ function renderLanding(cfg){
   let servRows='';
   for(let i=0;i<servItems.length;i+=2){ servRows+=`<div class="brow">${servItems.slice(i,i+2).join('')}</div>`; }
 
-  const teamItems = (eq.items||[]).map(m=>`
-        <div class="tmember"><div class="tavatar">${esc(m.iniciales)}</div><h3>${esc(m.nombre)}</h3><div class="role">${esc(m.rol)}</div><span class="mp">${esc(m.mp)}</span></div>`).join('');
+  const teamItems = (eq.items||[]).map((m,i)=>{
+    const tel = String(m.tel||'').replace(/[^\d]/g,'');
+    const contacto = tel ? `
+          <div class="tcontact">
+            <button type="button" class="tcbtn" onclick="toggleContacto(${i})">Contactar</button>
+            <div class="tcopts" id="tcopts-${i}">
+              <a href="tel:+${tel}" class="tcopt call">📞 Llamar</a>
+              <a href="https://wa.me/${tel}" target="_blank" rel="noopener noreferrer" class="tcopt wa">💬 WhatsApp</a>
+            </div>
+          </div>` : '';
+    return `
+        <div class="tmember"><div class="tavatar">${esc(m.iniciales)}</div><h3>${esc(m.nombre)}</h3><div class="role">${esc(m.rol)}</div><span class="mp">${esc(m.mp)}</span>${contacto}</div>`;
+  }).join('');
 
   const secServicios = se.visible===false ? '' : `
   <section class="section" id="servicios">
@@ -924,6 +935,16 @@ function renderLanding(cfg){
     .tmember h3{font-family:var(--display);font-size:18px;font-weight:600;margin-bottom:3px;}
     .tmember .role{font-size:13px;color:var(--muted);margin-bottom:10px;}
     .tmember .mp{display:inline-block;font-size:12px;font-weight:600;color:var(--olive-dark);background:rgba(138,140,82,0.12);border-radius:99px;padding:4px 13px;}
+    .tcontact{margin-top:16px;}
+    .tcbtn{font:inherit;font-size:13px;font-weight:600;color:#fff;background:var(--olive-dark);border:none;border-radius:99px;padding:9px 22px;cursor:pointer;transition:.15s;}
+    .tcbtn:hover{background:var(--olive-deep);}
+    .tcopts{display:none;flex-direction:column;gap:8px;margin-top:12px;}
+    .tcopts.open{display:flex;}
+    .tcopt{display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;padding:11px 16px;border-radius:12px;transition:.15s;}
+    .tcopt.call{background:var(--bg-2);color:var(--ink);border:1px solid var(--line);}
+    .tcopt.call:hover{border-color:var(--olive);}
+    .tcopt.wa{background:#25d366;color:#fff;}
+    .tcopt.wa:hover{background:#1eb955;}
     @media(max-width:720px){ .team-grid{flex-direction:column;} .tmember{width:100%;margin-bottom:14px;} }
     .close{display:flex;justify-content:space-between;}
     .close-cta{width:57%;background:linear-gradient(150deg,var(--ink),var(--olive-deep));color:#fff;border-radius:30px;padding:52px 46px;position:relative;overflow:hidden;}
@@ -1002,6 +1023,13 @@ ${secUbic}
   </footer>
   <script>
     document.getElementById('yr').textContent = new Date().getFullYear();
+    function toggleContacto(i){
+      var el = document.getElementById('tcopts-'+i);
+      var abierto = el.classList.contains('open');
+      var todos = document.querySelectorAll('.tcopts');
+      for (var k=0;k<todos.length;k++) todos[k].classList.remove('open');
+      if(!abierto) el.classList.add('open');
+    }
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(()=>{}); }); }
   </script>
 </body>
