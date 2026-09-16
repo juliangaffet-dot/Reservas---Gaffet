@@ -141,6 +141,9 @@
       <h2>Equipo <label class="switch"><input type="checkbox" id="equipo-visible"> Mostrar</label></h2>
       <label>Título de la sección</label>
       <input type="text" id="equipo-titulo">
+      <label>Mensaje predeterminado de WhatsApp</label>
+      <textarea id="equipo-mensajeWa" placeholder="Hola {nombre}! Te escribo desde la web de Kine House. Quería hacerte una consulta."></textarea>
+      <div class="muted-note">Es el texto que ya aparece escrito cuando el paciente toca "Contactar" → WhatsApp. Donde pongas {nombre} se reemplaza por el nombre de cada profesional. Si lo dejás vacío, se usa el mensaje de ejemplo.</div>
       <div id="equipo-items" style="margin-top:14px;"></div>
       <button class="addbtn" onclick="addMiembro()">+ Agregar integrante</button>
     </div>
@@ -205,7 +208,7 @@ function pintar(){
   const se=cfg.servicios||{}; setChk('servicios-visible',se.visible);setVal('servicios-titulo',se.titulo);setVal('servicios-sub',se.sub);
   renderServicios(se.items||[]);
   const no=cfg.nosotros||{}; setChk('nosotros-visible',no.visible);setVal('nosotros-titulo',no.titulo);setVal('nosotros-p1',no.p1);setVal('nosotros-p2',no.p2);
-  const eq=cfg.equipo||{}; setChk('equipo-visible',eq.visible);setVal('equipo-titulo',eq.titulo);
+  const eq=cfg.equipo||{}; setChk('equipo-visible',eq.visible);setVal('equipo-titulo',eq.titulo);setVal('equipo-mensajeWa',eq.mensajeWa||'Hola {nombre}! Te escribo desde la web de Kine House. Quería hacerte una consulta.');
   renderEquipo(eq.items||[]);
   const ub=cfg.ubicacion||{}; setChk('ubicacion-visible',ub.visible);setVal('ubicacion-direccion',ub.direccion);setVal('ubicacion-ciudad',ub.ciudad);setVal('ubicacion-maps',ub.maps);
   const ct=cfg.cta||{}; setVal('cta-titulo',ct.titulo);setVal('cta-sub',ct.sub);
@@ -263,7 +266,7 @@ function recolectar(){
   cfg.hero = {tag:val('hero-tag'),titulo:val('hero-titulo'),destacado:val('hero-destacado'),sub:val('hero-sub')};
   cfg.servicios = Object.assign(cfg.servicios||{}, {visible:document.getElementById('servicios-visible').checked,titulo:val('servicios-titulo'),sub:val('servicios-sub')});
   cfg.nosotros = {visible:document.getElementById('nosotros-visible').checked,titulo:val('nosotros-titulo'),p1:val('nosotros-p1'),p2:val('nosotros-p2')};
-  cfg.equipo = Object.assign(cfg.equipo||{}, {visible:document.getElementById('equipo-visible').checked,titulo:val('equipo-titulo')});
+  cfg.equipo = Object.assign(cfg.equipo||{}, {visible:document.getElementById('equipo-visible').checked,titulo:val('equipo-titulo'),mensajeWa:val('equipo-mensajeWa')});
   cfg.ubicacion = {visible:document.getElementById('ubicacion-visible').checked,direccion:val('ubicacion-direccion'),ciudad:val('ubicacion-ciudad'),maps:val('ubicacion-maps')};
   cfg.cta = {titulo:val('cta-titulo'),sub:val('cta-sub')};
 }
