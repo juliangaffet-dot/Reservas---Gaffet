@@ -129,6 +129,7 @@ const DEFAULT_WEB = {
   equipo: {
     visible: true,
     titulo: "Profesionales matriculados",
+    mensajeWa: "Hola {nombre}! Te escribo desde la web de Kine House. Quer\u00eda hacerte una consulta.",
     items: [
       { iniciales: "JG", nombre: "Lic. Juli\u00e1n Gaffet", rol: "Kinesi\u00f3logo", mp: "M.P. 1321", tel: "" },
       { iniciales: "MA", nombre: "Lic. Mauro Ayub", rol: "Kinesi\u00f3logo", mp: "M.P. 1263", tel: "" },
@@ -787,14 +788,17 @@ function renderLanding(cfg){
   let servRows='';
   for(let i=0;i<servItems.length;i+=2){ servRows+=`<div class="brow">${servItems.slice(i,i+2).join('')}</div>`; }
 
+  const msgWaBase = (typeof eq.mensajeWa === 'string' && eq.mensajeWa.trim()) ? eq.mensajeWa : DEFAULT_WEB.equipo.mensajeWa;
   const teamItems = (eq.items||[]).map((m,i)=>{
     const tel = String(m.tel||'').replace(/[^\d]/g,'');
+    const msgWa = msgWaBase.replace(/\{nombre\}/g, String(m.nombre||'').trim());
+    const waHref = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(msgWa);
     const contacto = tel ? `
           <div class="tcontact">
             <button type="button" class="tcbtn" onclick="toggleContacto(${i})">Contactar</button>
             <div class="tcopts" id="tcopts-${i}">
               <a href="tel:+${tel}" class="tcopt call">📞 Llamar</a>
-              <a href="https://wa.me/${tel}" target="_blank" rel="noopener noreferrer" class="tcopt wa">💬 WhatsApp</a>
+              <a href="${esc(waHref)}" target="_blank" rel="noopener noreferrer" class="tcopt wa">💬 WhatsApp</a>
             </div>
           </div>` : '';
     const avatar = hasMedia('equipo-'+i)
