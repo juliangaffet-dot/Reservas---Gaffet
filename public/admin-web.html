@@ -21,7 +21,24 @@
   .card h2{font-size:16px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
   .card .hint{font-size:12.5px;color:var(--muted);margin-bottom:16px;}
   label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:12px 0 5px;}
-  input[type=text],textarea{width:100%;font:inherit;font-size:14px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fdfcf9;color:var(--ink);}
+  input[type=text],textarea,input[type=time],input[type=number],select{width:100%;font:inherit;font-size:14px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fdfcf9;color:var(--ink);}
+  input[type=time],input[type=number]{padding:9px 10px;}
+  select{cursor:pointer;}
+  .hprof{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;background:#fdfcf9;}
+  .hprof>h3{font-size:14px;margin-bottom:4px;}
+  .hprof .hsub{font-size:12px;color:var(--muted);margin-bottom:12px;}
+  .hday{border-top:1px solid var(--line);padding:12px 0 4px;}
+  .hday:first-of-type{border-top:none;}
+  .hday-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
+  .hday-top b{font-size:13px;}
+  .hblq{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .hblq .hb-sw{flex:0 0 100%;}
+  .hblq .hb-campo{flex:1 1 118px;}
+  .hblq .hb-cupos{flex:0 1 92px;}
+  .hblq label{margin:0 0 4px;}
+  .hclose{font-size:12.5px;color:var(--muted);padding:2px 0 8px;}
+  .copiar{background:none;border:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--olive-dark);text-decoration:underline;cursor:pointer;padding:0;}
+  .imgdel{background:none;border:none;font:inherit;font-size:12.5px;font-weight:600;color:#b04a3a;cursor:pointer;text-decoration:underline;padding:0;margin-top:6px;}
   textarea{resize:vertical;min-height:64px;}
   input:focus,textarea:focus{outline:none;border-color:var(--olive);}
   .row{display:flex;gap:12px;flex-wrap:wrap;}
@@ -164,8 +181,24 @@
       <input type="text" id="turnero-exitoTitulo">
       <label>Texto debajo del turno confirmado</label>
       <textarea id="turnero-exitoNota"></textarea>
-      <div class="muted-note">La dirección y el link de Google Maps que ve el paciente salen de la sección Ubicación.</div>
+      <label style="margin-top:16px;">Foto de portada del turnero</label>
+      <div class="imgrow">
+        <img class="imgprev" id="prev-turnero-hero" src="/media/turnero-hero" onerror="this.style.opacity=.35">
+        <div>
+          <input type="file" id="file-turnero-hero" accept="image/*" onchange="subirImg('turnero-hero', this)">
+          <div class="muted-note">Foto horizontal. Si no subís ninguna, la portada queda con el color principal.</div>
+          <button class="imgdel" onclick="borrarImg('turnero-hero')">Quitar foto</button>
+        </div>
+      </div>
+      <div class="muted-note" style="margin-top:14px;">La dirección y el link de Google Maps que ve el paciente salen de la sección Ubicación. Las fotos de los profesionales en las tarjetas son las que subís en la sección Equipo; si un profesional no tiene foto, se muestran sus iniciales.</div>
       <div style="margin-top:14px;"><a href="/" target="_blank" class="btn btn-ghost" style="display:inline-block;text-decoration:none;">Ver la página de reservas ↗</a></div>
+    </div>
+
+    <!-- HORARIOS Y CUPOS -->
+    <div class="card">
+      <h2>Horarios y cupos</h2>
+      <div class="hint">Los días y horas que cada profesional tiene disponibles para reservar, y cuántos pacientes entran en cada horario. "Último turno" es la última hora que el paciente puede elegir.</div>
+      <div id="horarios-cont"></div>
     </div>
 
     <!-- UBICACION -->
@@ -211,11 +244,97 @@ async function login(){
   arrancar();
 }
 
+let PROFES = [];
+
 async function arrancar(){
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='block';
   cfg = await (await fetch('/api/web')).json();
+  try { PROFES = (await (await fetch('/api/profesionales')).json()).profesionales || []; } catch(e){ PROFES = []; }
   pintar();
+}
+
+const DIAS_NOMBRE = {1:'Lunes',2:'Martes',3:'Miércoles',4:'Jueves',5:'Viernes'};
+
+function horarioGenerico(){
+  const dias = {};
+  [1,2,3,4,5].forEach(d => { dias[d] = {
+    atiende:true,
+    manana:{activo:false,desde:'09:00',hasta:'11:30',cupos:3},
+    tarde:{activo:true,desde:'15:00',hasta:'19:30',cupos:2}
+  }; });
+  return {intervalo:30, dias:dias};
+}
+
+function horarioDe(id){
+  if(!cfg.horarios) cfg.horarios = {};
+  if(!cfg.horarios[id] || !cfg.horarios[id].dias) cfg.horarios[id] = horarioGenerico();
+  const h = cfg.horarios[id];
+  [1,2,3,4,5].forEach(d => {
+    if(!h.dias[d]) h.dias[d] = horarioGenerico().dias[d];
+    if(!h.dias[d].manana) h.dias[d].manana = {activo:false,desde:'09:00',hasta:'11:30',cupos:3};
+    if(!h.dias[d].tarde)  h.dias[d].tarde  = {activo:false,desde:'15:00',hasta:'19:30',cupos:2};
+  });
+  return h;
+}
+
+function bloqueHTML(id, d, bloque, nombre){
+  const b = horarioDe(id).dias[d][bloque];
+  const on = b.activo !== false;
+  return `
+      <div class="hblq">
+        <label class="switch hb-sw"><input type="checkbox" ${on?'checked':''} onchange="setBloque('${id}',${d},'${bloque}','activo',this.checked)"> ${nombre}</label>
+        ${on ? `
+        <div class="hb-campo"><label>Primer turno</label><input type="time" value="${esc(b.desde)}" onchange="setBloque('${id}',${d},'${bloque}','desde',this.value)"></div>
+        <div class="hb-campo"><label>Último turno</label><input type="time" value="${esc(b.hasta)}" onchange="setBloque('${id}',${d},'${bloque}','hasta',this.value)"></div>
+        <div class="hb-campo hb-cupos"><label>Cupos</label><input type="number" min="1" max="10" value="${parseInt(b.cupos,10)||1}" onchange="setBloque('${id}',${d},'${bloque}','cupos',this.value)"></div>` : ''}
+      </div>`;
+}
+
+function renderHorarios(){
+  const lista = PROFES.length ? PROFES : [{id:'julian',nombre:'Lic. Julián Gaffet'},{id:'mauro',nombre:'Lic. Mauro Ayub'},{id:'esteban',nombre:'Lic. Esteban Videla'}];
+  document.getElementById('horarios-cont').innerHTML = lista.map(p => {
+    const h = horarioDe(p.id);
+    const dias = [1,2,3,4,5].map(d => {
+      const dia = h.dias[d];
+      const atiende = dia.atiende !== false;
+      return `
+      <div class="hday">
+        <div class="hday-top">
+          <b>${DIAS_NOMBRE[d]}</b>
+          <label class="switch"><input type="checkbox" ${atiende?'checked':''} onchange="setDia('${p.id}',${d},'atiende',this.checked)"> Atiende</label>
+        </div>
+        ${atiende ? bloqueHTML(p.id,d,'manana','Mañana') + bloqueHTML(p.id,d,'tarde','Tarde')
+                  : '<div class="hclose">Este día no aparece disponible para reservar.</div>'}
+      </div>`;
+    }).join('');
+    return `
+    <div class="hprof">
+      <h3>${esc(p.nombre)}</h3>
+      <div class="hsub">Los turnos se generan cada ${parseInt(h.intervalo,10)||30} minutos.</div>
+      <label>Cada cuánto empieza un turno</label>
+      <select onchange="setIntervalo('${p.id}',this.value)">
+        ${[15,20,30,45,60].map(n => `<option value="${n}" ${((parseInt(h.intervalo,10)||30)===n)?'selected':''}>${n} minutos</option>`).join('')}
+      </select>
+      ${dias}
+      <div style="margin-top:10px;"><button class="copiar" onclick="copiarLunes('${p.id}')">Copiar el lunes al resto de los días</button></div>
+    </div>`;
+  }).join('');
+}
+
+function setDia(id,d,k,v){ horarioDe(id).dias[d][k]=v; renderHorarios(); }
+function setBloque(id,d,bloque,k,v){
+  const b = horarioDe(id).dias[d][bloque];
+  b[k] = (k==='cupos') ? (Math.max(1, Math.min(10, parseInt(v,10)||1))) : v;
+  if(k==='activo') renderHorarios();
+}
+function setIntervalo(id,v){ horarioDe(id).intervalo = parseInt(v,10)||30; renderHorarios(); }
+function copiarLunes(id){
+  const h = horarioDe(id);
+  const lunes = JSON.parse(JSON.stringify(h.dias[1]));
+  [2,3,4,5].forEach(d => { h.dias[d] = JSON.parse(JSON.stringify(lunes)); });
+  renderHorarios();
+  toast('✅ Lunes copiado al resto');
 }
 
 function val(id){ return document.getElementById(id).value; }
@@ -234,6 +353,7 @@ function pintar(){
   const tu=cfg.turnero||{};
   setVal('turnero-titulo',tu.titulo);setVal('turnero-sub',tu.sub);setVal('turnero-labelProfesional',tu.labelProfesional);
   setVal('turnero-notaEmail',tu.notaEmail);setVal('turnero-exitoTitulo',tu.exitoTitulo);setVal('turnero-exitoNota',tu.exitoNota);
+  renderHorarios();
   const ct=cfg.cta||{}; setVal('cta-titulo',ct.titulo);setVal('cta-sub',ct.sub);
 }
 
@@ -299,6 +419,16 @@ async function guardar(){
   recolectar();
   const r = await fetch('/api/web',{method:'POST',headers:{'Content-Type':'application/json','x-panel-password':PW},body:JSON.stringify(cfg)});
   if(r.ok) toast('✅ Cambios guardados'); else toast('Error al guardar');
+}
+
+async function borrarImg(clave){
+  const r = await fetch('/api/web/upload/'+clave,{method:'DELETE',headers:{'x-panel-password':PW}});
+  if(r.ok){
+    toast('✅ Foto quitada');
+    const p=document.getElementById('prev-'+clave);
+    if(p){ p.src='/media/'+clave+'?t='+Date.now(); p.style.opacity=.35; }
+    const f=document.getElementById('file-'+clave); if(f) f.value='';
+  } else toast('Error al quitar la foto');
 }
 
 function subirImg(clave, input){
