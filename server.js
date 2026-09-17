@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const app = express();
 app.use(express.json({ limit: '14mb' }));
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // ─── BASE DE DATOS ────────────────────────────────────────────────────────────
 const fs = require('fs');
@@ -141,6 +141,14 @@ const DEFAULT_WEB = {
     direccion: "Cmte. Piedrabuena 820",
     ciudad: "Salta, Argentina",
     maps: "https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5"
+  },
+  turnero: {
+    titulo: "Reservar turno",
+    sub: "Centro de Kinesiolog\u00eda y Fisioterapia \u00b7 Readaptaci\u00f3n F\u00edsica",
+    labelProfesional: "Eleg\u00ed tu profesional",
+    notaEmail: "\ud83d\udce7 Recibir\u00e1s una invitaci\u00f3n en tu email con recordatorio 30 minutos antes.",
+    exitoTitulo: "\u00a1Turno confirmado!",
+    exitoNota: "Revis\u00e1 tu email \u2014 te llegar\u00e1 una invitaci\u00f3n de Google Calendar con recordatorio 30 min antes."
   },
   cta: {
     titulo: "\u00bfListo para empezar?",
@@ -771,12 +779,26 @@ function darken(hex, f){
   return '#'+h(r)+h(g)+h(b);
 }
 
+function lighten(hex, f){
+  // f: 0..1 cuánto blanco se le mezcla
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex||'').trim());
+  if(!m) return '#f2f2e9';
+  let r=parseInt(m[1],16), g=parseInt(m[2],16), b=parseInt(m[3],16);
+  r=Math.round(r+(255-r)*f); g=Math.round(g+(255-g)*f); b=Math.round(b+(255-b)*f);
+  const h=n=>('0'+n.toString(16)).slice(-2);
+  return '#'+h(r)+h(g)+h(b);
+}
+function colorPrincipal(cfg){
+  return (cfg.color && /^#?[a-f\d]{6}$/i.test(String(cfg.color).replace('#',''))) ? (cfg.color[0]==='#'?cfg.color:'#'+cfg.color) : '#8a8c52';
+}
+function logoSrcDe(){ return hasMedia('logo') ? '/media/logo' : '/03%20KINE%20ISO%20COMBINADO.png'; }
+
 // ─── RENDER DE LA LANDING DESDE LA CONFIG ────────────────────────────────────
 function renderLanding(cfg){
-  const olive = (cfg.color && /^#?[a-f\d]{6}$/i.test(cfg.color.replace('#',''))) ? (cfg.color[0]==='#'?cfg.color:'#'+cfg.color) : '#8a8c52';
+  const olive = colorPrincipal(cfg);
   const oliveDark = darken(olive, 0.28);
   const oliveDeep = darken(olive, 0.48);
-  const logoSrc = hasMedia('logo') ? '/media/logo' : '/03%20KINE%20ISO%20COMBINADO.png';
+  const logoSrc = logoSrcDe();
   const heroHas = hasMedia('hero');
   const nosHas  = hasMedia('nosotros');
 
@@ -1043,6 +1065,31 @@ ${secUbic}
 </html>`;
 }
 
+// ─── RENDER DEL TURNERO (public/index.html + config) ──────────────────────────
+function renderTurnero(cfg){
+  const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+  const olive = colorPrincipal(cfg);
+  const oliveDark = darken(olive, 0.28);
+  const oliveDeep = darken(olive, 0.48);
+  const vars = `--olive:${olive};--olive-dark:${oliveDark};--olive-deep:${oliveDeep};`
+             + `--olive-soft:${lighten(olive, 0.88)};--olive-line:${lighten(olive, 0.55)};`;
+  const tu = Object.assign({}, DEFAULT_WEB.turnero, cfg.turnero || {});
+  const ub = cfg.ubicacion || {};
+  const data = {
+    titulo: tu.titulo, sub: tu.sub, labelProfesional: tu.labelProfesional,
+    notaEmail: tu.notaEmail, exitoTitulo: tu.exitoTitulo, exitoNota: tu.exitoNota,
+    direccion: ub.direccion || DEFAULT_WEB.ubicacion.direccion,
+    ciudad: ub.ciudad || DEFAULT_WEB.ubicacion.ciudad,
+    maps: ub.maps || DEFAULT_WEB.ubicacion.maps,
+    logo: logoSrcDe()
+  };
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  return html
+    .replace('/*KH_VARS*/', vars)
+    .replace('/*KH_CFG*/', 'window.KH_CFG = Object.assign(window.KH_CFG, ' + json + ');')
+    .replace('content="#46482c"', 'content="' + oliveDeep + '"');
+}
+
 // ─── ENDPOINTS WEB ───────────────────────────────────────────────────────────
 app.get('/api/web', (req, res) => { res.json(getWebConfig()); });
 
@@ -1074,6 +1121,11 @@ app.get('/media/:clave', (req, res) => {
   res.send(Buffer.from(row.datos, 'base64'));
 });
 
+app.get('/', (req, res) => {
+  res.set('Cache-Control','no-cache');
+  try { res.send(renderTurnero(getWebConfig())); }
+  catch(e) { console.error('Error render turnero:', e.message); res.sendFile(path.join(__dirname, 'public', 'index.html')); }
+});
 app.get('/asistencia', (req, res) => res.sendFile(path.join(__dirname, 'public', 'asistencia.html')));
 app.get('/agenda', (req, res) => res.sendFile(path.join(__dirname, 'public', 'agenda.html')));
 app.get('/inicio', (req, res) => { res.set('Cache-Control','no-cache'); res.send(renderLanding(getWebConfig())); });
