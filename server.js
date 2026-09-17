@@ -100,6 +100,32 @@ db.exec(`
   );
 `);
 
+// Horarios por defecto: replican exactamente los que estaban escritos en el
+// código del turnero. 'hasta' es la hora del ÚLTIMO turno del bloque.
+const DIAS_LABORALES = [1,2,3,4,5];
+function horariosProf(manana, tarde, exc){
+  const dias = {};
+  DIAS_LABORALES.forEach(d => {
+    const e = (exc && exc[d]) || {};
+    dias[d] = {
+      atiende: !e.cerrado,
+      manana: manana
+        ? { activo:true, desde: e.mananaDesde || manana.desde, hasta: e.mananaHasta || manana.hasta, cupos: manana.cupos }
+        : { activo:false, desde:'09:00', hasta:'11:30', cupos:3 },
+      tarde: tarde
+        ? { activo:true, desde: e.tardeDesde || tarde.desde, hasta: e.tardeHasta || tarde.hasta, cupos: tarde.cupos }
+        : { activo:false, desde:'15:00', hasta:'19:30', cupos:2 }
+    };
+  });
+  return { intervalo: 30, dias };
+}
+const DEFAULT_HORARIOS = {
+  julian:  horariosProf(null, { desde:'16:30', hasta:'19:30', cupos:2 }, { 3:{tardeHasta:'19:00'}, 5:{tardeHasta:'19:00'} }),
+  mauro:   horariosProf({ desde:'09:00', hasta:'11:30', cupos:3 }, { desde:'15:00', hasta:'18:30', cupos:2 }, { 5:{tardeHasta:'17:30'} }),
+  esteban: horariosProf(null, { desde:'15:00', hasta:'19:30', cupos:2 }, {})
+};
+function horariosGenericos(){ return horariosProf(null, { desde:'15:00', hasta:'19:30', cupos:2 }, {}); }
+
 // Config por defecto (se usa si el admin todavía no guardó nada)
 const DEFAULT_WEB = {
   color: "#8a8c52",
@@ -142,6 +168,7 @@ const DEFAULT_WEB = {
     ciudad: "Salta, Argentina",
     maps: "https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5"
   },
+  horarios: DEFAULT_HORARIOS,
   turnero: {
     titulo: "Reservar turno",
     sub: "Centro de Kinesiolog\u00eda y Fisioterapia \u00b7 Readaptaci\u00f3n F\u00edsica",
@@ -1075,13 +1102,32 @@ function renderTurnero(cfg){
              + `--olive-soft:${lighten(olive, 0.88)};--olive-line:${lighten(olive, 0.55)};`;
   const tu = Object.assign({}, DEFAULT_WEB.turnero, cfg.turnero || {});
   const ub = cfg.ubicacion || {};
+  // horarios y cupos de cada profesional (lo editado en el panel, o el default)
+  const horarios = {};
+  Object.keys(PROFESIONALES).forEach(id => {
+    horarios[id] = (cfg.horarios && cfg.horarios[id]) || DEFAULT_HORARIOS[id] || horariosGenericos();
+  });
+  // foto de cada profesional: se reusa la que se subió en la sección Equipo
+  const fotosProf = {};
+  const equipoItems = (cfg.equipo && cfg.equipo.items) || [];
+  Object.keys(PROFESIONALES).forEach(id => {
+    const p = PROFESIONALES[id];
+    const i = equipoItems.findIndex(m =>
+      (String(m.mp||'').replace(/\D/g,'') && String(m.mp||'').replace(/\D/g,'') === String(p.mp)) ||
+      String(m.nombre||'').trim().toLowerCase() === String(p.nombre||'').trim().toLowerCase()
+    );
+    if (i >= 0 && hasMedia('equipo-' + i)) fotosProf[id] = '/media/equipo-' + i;
+  });
   const data = {
     titulo: tu.titulo, sub: tu.sub, labelProfesional: tu.labelProfesional,
     notaEmail: tu.notaEmail, exitoTitulo: tu.exitoTitulo, exitoNota: tu.exitoNota,
     direccion: ub.direccion || DEFAULT_WEB.ubicacion.direccion,
     ciudad: ub.ciudad || DEFAULT_WEB.ubicacion.ciudad,
     maps: ub.maps || DEFAULT_WEB.ubicacion.maps,
-    logo: logoSrcDe()
+    logo: logoSrcDe(),
+    heroFoto: hasMedia('turnero-hero') ? '/media/turnero-hero' : '',
+    horarios: horarios,
+    fotosProf: fotosProf
   };
   const json = JSON.stringify(data).replace(/</g, '\\u003c');
   return html
@@ -1100,7 +1146,7 @@ app.post('/api/web', authPanel, (req, res) => {
 
 app.post('/api/web/upload', authPanel, (req, res) => {
   const { clave, dataUri } = req.body || {};
-  if (!/^(logo|hero|nosotros|equipo-\d+)$/.test(clave)) return res.status(400).json({ error: 'Clave inválida' });
+  if (!/^(logo|hero|nosotros|turnero-hero|equipo-\d+)$/.test(clave)) return res.status(400).json({ error: 'Clave inválida' });
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUri||'');
   if (!m) return res.status(400).json({ error: 'Imagen inválida' });
   db.prepare("INSERT INTO web_media (clave, mime, datos, actualizado) VALUES (?,?,?,datetime('now','-3 hours')) ON CONFLICT(clave) DO UPDATE SET mime=excluded.mime, datos=excluded.datos, actualizado=excluded.actualizado")
