@@ -27,6 +27,11 @@
 
     /* ── Encabezado ─────────────────────────────────────────── */
     .hero{position:relative;overflow:hidden;background:linear-gradient(150deg,var(--olive) 0%,var(--olive-deep) 100%);color:#fff;padding:22px 22px 30px;}
+    .hero-photo{position:absolute;inset:0;background-size:cover;background-position:center;display:none;}
+    .hero-photo.on{display:block;}
+    .hero-overlay{position:absolute;inset:0;display:none;background:linear-gradient(to top, rgba(30,30,24,0.80) 0%, rgba(30,30,24,0.45) 55%, rgba(30,30,24,0.30) 100%);}
+    .hero-overlay.on{display:block;}
+    .hero.con-foto{padding-bottom:36px;}
     .hero-inner{position:relative;z-index:1;max-width:640px;margin:0 auto;}
     .back{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:500;color:#fff;text-decoration:none;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.28);padding:8px 15px;border-radius:99px;transition:.15s;}
     .back:hover{background:rgba(255,255,255,0.24);}
@@ -47,6 +52,7 @@
     /* profesionales */
     .prof-card{display:flex;align-items:center;gap:15px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;cursor:pointer;transition:.18s;margin-bottom:12px;}
     .prof-card:hover{border-color:transparent;box-shadow:0 14px 34px rgba(74,76,44,0.10);transform:translateY(-2px);}
+    .prof-avatar.foto,.prof-chip-avatar.foto{background-size:cover;background-position:center;color:transparent;}
     .prof-avatar{width:54px;height:54px;border-radius:17px;background:linear-gradient(145deg,var(--olive),var(--olive-dark));display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:18px;font-weight:600;color:#fff;flex-shrink:0;}
     .prof-info{flex:1;min-width:0;}
     .prof-nombre{font-family:var(--display);font-size:17px;font-weight:600;letter-spacing:-0.01em;}
@@ -161,7 +167,9 @@
   </style>
 </head>
 <body>
-  <header class="hero">
+  <header class="hero" id="kh-hero">
+    <div class="hero-photo" id="kh-hero-photo"></div>
+    <div class="hero-overlay" id="kh-hero-overlay"></div>
     <div class="hero-inner">
       <a href="/inicio" class="back">← Inicio</a>
       <div class="hero-brand">
@@ -283,10 +291,38 @@
     direccion: 'Cmte. Piedrabuena 820',
     ciudad: 'Salta, Argentina',
     maps: 'https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5',
-    logo: '/03%20KINE%20ISO%20COMBINADO.png'
+    logo: '/03%20KINE%20ISO%20COMBINADO.png',
+    heroFoto: '',
+    horarios: null,
+    fotosProf: {}
   };
   /*KH_CFG*/
   var CFG = window.KH_CFG;
+
+  // Horarios de respaldo: los mismos que estaban escritos a mano acá.
+  // Solo se usan si el servidor no inyectó los del panel.
+  function horariosDeRespaldo() {
+    var armar = function(manana, tarde, exc) {
+      var dias = {};
+      [1,2,3,4,5].forEach(function(d) {
+        var e = (exc && exc[d]) || {};
+        dias[d] = {
+          atiende: true,
+          manana: manana ? { activo:true, desde:manana.desde, hasta:manana.hasta, cupos:manana.cupos }
+                         : { activo:false, desde:'09:00', hasta:'11:30', cupos:3 },
+          tarde:  tarde  ? { activo:true, desde:tarde.desde, hasta:(e.tardeHasta||tarde.hasta), cupos:tarde.cupos }
+                         : { activo:false, desde:'15:00', hasta:'19:30', cupos:2 }
+        };
+      });
+      return { intervalo:30, dias:dias };
+    };
+    return {
+      julian:  armar(null, {desde:'16:30',hasta:'19:30',cupos:2}, {3:{tardeHasta:'19:00'},5:{tardeHasta:'19:00'}}),
+      mauro:   armar({desde:'09:00',hasta:'11:30',cupos:3}, {desde:'15:00',hasta:'18:30',cupos:2}, {5:{tardeHasta:'17:30'}}),
+      esteban: armar(null, {desde:'15:00',hasta:'19:30',cupos:2}, {})
+    };
+  }
+  if (!CFG.horarios || !Object.keys(CFG.horarios).length) CFG.horarios = horariosDeRespaldo();
 
   function pintarTextos() {
     if (CFG.titulo) document.title = 'Kine House — ' + CFG.titulo;
@@ -300,6 +336,21 @@
     set('kh-direccion', CFG.direccion);
     if (CFG.maps) document.getElementById('kh-maps').href = CFG.maps;
     if (CFG.logo) document.getElementById('kh-logo').src = CFG.logo;
+    if (CFG.heroFoto) {
+      var foto = document.getElementById('kh-hero-photo');
+      foto.style.backgroundImage = 'url(' + CFG.heroFoto + ')';
+      foto.classList.add('on');
+      document.getElementById('kh-hero-overlay').classList.add('on');
+      document.getElementById('kh-hero').classList.add('con-foto');
+    }
+  }
+  function fotoDe(profId) {
+    return (CFG.fotosProf || {})[profId] || '';
+  }
+  function avatarHTML(clase, prof) {
+    var foto = fotoDe(prof.id);
+    if (foto) return '<div class="' + clase + ' foto" style="background-image:url(' + escapeHtml(foto) + ')" title="' + escapeHtml(prof.nombre) + '"></div>';
+    return '<div class="' + clase + '">' + escapeHtml(iniciales(prof.nombre)) + '</div>';
   }
   function direccionCompleta() {
     return CFG.direccion + (CFG.ciudad ? ', ' + CFG.ciudad : '');
@@ -346,46 +397,46 @@
     return palabras.length >= 2 ? palabras[0][0] + palabras[palabras.length - 1][0] : palabras[0].substring(0, 2);
   }
 
-  // ── HORARIOS ──────────────────────────────────────────────────────────────
-  function getSlotsManana(dateStr) {
-    const profId = profesionalActual ? profesionalActual.id : 'julian';
-    const dow = new Date(dateStr + 'T12:00:00').getDay();
-    // Mauro: lun-vie 09:00 a 11:30, cada 30 min
-    if (profId === 'mauro' && dow >= 1 && dow <= 5) {
-      const slots = [];
-      for (let m = 9 * 60; m <= 11 * 60 + 30; m += 30)
-        slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
-      return slots;
-    }
-    return [];
+  // ── HORARIOS (salen del panel; ver CFG.horarios) ──────────────────────────
+  function profIdActual() { return profesionalActual ? profesionalActual.id : 'julian'; }
+  function horarioProf(profId) {
+    var h = (CFG.horarios || {})[profId];
+    if (h && h.dias) return h;
+    var respaldo = horariosDeRespaldo();
+    return respaldo[profId] || respaldo.julian;
   }
-
-  function getSlotsTarde(dateStr) {
-    const profId = profesionalActual ? profesionalActual.id : 'julian';
-    const dow = new Date(dateStr + 'T12:00:00').getDay();
-    const slots = [];
-    if (profId === 'mauro') {
-      // Lun-Jue: último slot 18:30 | Vie: último slot 17:30
-      const endMin = dow === 5 ? 18 * 60 : 19 * 60;
-      for (let m = 15 * 60; m < endMin; m += 30)
-        slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
-    } else if (profId === 'esteban') {
-      // Lun-Vie: último slot 19:30
-      for (let m = 15 * 60; m < 20 * 60; m += 30)
-        slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
-    } else {
-      // Julian: Mié y Vie último slot 19:00, resto último slot 19:30
-      const endMin = (dow === 3 || dow === 5) ? 19 * 60 + 30 : 20 * 60;
-      for (let m = 16 * 60 + 30; m < endMin; m += 30)
-        slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
-    }
+  function diaDeHorario(profId, dateStr) {
+    var h = horarioProf(profId);
+    var dow = new Date(dateStr + 'T12:00:00').getDay();
+    return (h.dias || {})[dow] || (h.dias || {})[String(dow)] || null;
+  }
+  function timeToMin(t) {
+    var p = String(t || '').split(':');
+    return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+  }
+  function slotsDeBloque(dateStr, bloque) {
+    if (!dateStr) return [];
+    var profId = profIdActual();
+    var dia = diaDeHorario(profId, dateStr);
+    if (!dia || dia.atiende === false) return [];
+    var b = dia[bloque];
+    if (!b || b.activo === false) return [];
+    var paso = parseInt(horarioProf(profId).intervalo, 10) || 30;
+    if (paso < 5) paso = 5;
+    var ini = timeToMin(b.desde), fin = timeToMin(b.hasta);
+    var slots = [];
+    for (var m = ini; m <= fin && slots.length < 60; m += paso)
+      slots.push(pad(Math.floor(m / 60)) + ':' + pad(m % 60));
     return slots;
   }
+  function getSlotsManana(dateStr) { return slotsDeBloque(dateStr, 'manana'); }
+  function getSlotsTarde(dateStr)  { return slotsDeBloque(dateStr, 'tarde'); }
 
   function getCapacidadSlot(slot, dateStr) {
-    const manana = getSlotsManana(dateStr);
-    const profId = profesionalActual ? profesionalActual.id : 'julian';
-    if (profId === 'mauro' && manana.includes(slot)) return 3;
+    var dia = diaDeHorario(profIdActual(), dateStr);
+    if (!dia) return 2;
+    if (getSlotsManana(dateStr).indexOf(slot) >= 0) return parseInt(dia.manana.cupos, 10) || 1;
+    if (getSlotsTarde(dateStr).indexOf(slot) >= 0)  return parseInt(dia.tarde.cupos, 10) || 1;
     return 2;
   }
 
@@ -447,7 +498,7 @@
         const div = document.createElement('div');
         div.className = 'prof-card';
         div.innerHTML =
-          '<div class="prof-avatar">' + escapeHtml(iniciales(p.nombre)) + '</div>' +
+          avatarHTML('prof-avatar', p) +
           '<div class="prof-info"><div class="prof-nombre">' + escapeHtml(p.nombre) + '</div><div class="prof-mp">M.P. ' + escapeHtml(p.mp) + '</div></div>' +
           '<div class="prof-arrow">›</div>';
         div.onclick = () => seleccionarProfesional(p);
@@ -458,7 +509,10 @@
 
   function seleccionarProfesional(prof) {
     profesionalActual = prof;
-    document.getElementById('prof-badge-avatar').textContent = iniciales(prof.nombre);
+    const chip = document.getElementById('prof-badge-avatar');
+    const foto = fotoDe(prof.id);
+    if (foto) { chip.classList.add('foto'); chip.style.backgroundImage = 'url(' + foto + ')'; chip.textContent = ''; }
+    else { chip.classList.remove('foto'); chip.style.backgroundImage = ''; chip.textContent = iniciales(prof.nombre); }
     document.getElementById('prof-badge-nombre').textContent = prof.nombre;
     document.getElementById('prof-badge-mp').textContent = 'M.P. ' + prof.mp;
     document.getElementById('step0').classList.remove('active');
@@ -503,8 +557,15 @@
   }
 
   function renderSlots() {
-    renderSlotGroup('slots-manana', selectedDate, getSlotsManana(selectedDate));
-    renderSlotGroup('slots-tarde', selectedDate, getSlotsTarde(selectedDate));
+    const manana = getSlotsManana(selectedDate);
+    const tarde = getSlotsTarde(selectedDate);
+    if (!manana.length && !tarde.length) {
+      document.getElementById('slots-manana').innerHTML = '<span class="dia-bloqueado">🚫 No hay atención este día</span>';
+      document.getElementById('slots-tarde').innerHTML = '';
+      return;
+    }
+    renderSlotGroup('slots-manana', selectedDate, manana);
+    renderSlotGroup('slots-tarde', selectedDate, tarde);
   }
 
   function renderSlotGroup(id, dateStr, slots) {
