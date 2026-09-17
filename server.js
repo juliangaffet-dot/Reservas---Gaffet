@@ -170,6 +170,8 @@ const DEFAULT_WEB = {
   },
   horarios: DEFAULT_HORARIOS,
   turnero: {
+    colorPropio: false,
+    color: "#8a8c52",
     titulo: "Reservar turno",
     sub: "Centro de Kinesiolog\u00eda y Fisioterapia \u00b7 Readaptaci\u00f3n F\u00edsica",
     labelProfesional: "Eleg\u00ed tu profesional",
@@ -1095,7 +1097,10 @@ ${secUbic}
 // ─── RENDER DEL TURNERO (public/index.html + config) ──────────────────────────
 function renderTurnero(cfg){
   const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
-  const olive = colorPrincipal(cfg);
+  const tuColor = cfg.turnero || {};
+  const olive = (tuColor.colorPropio === true)
+    ? colorPrincipal({ color: tuColor.color })
+    : colorPrincipal(cfg);
   const oliveDark = darken(olive, 0.28);
   const oliveDeep = darken(olive, 0.48);
   const vars = `--olive:${olive};--olive-dark:${oliveDark};--olive-deep:${oliveDeep};`
