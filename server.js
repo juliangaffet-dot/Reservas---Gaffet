@@ -1171,6 +1171,8 @@ function renderTurnero(cfg){
     maps: ub.maps || DEFAULT_WEB.ubicacion.maps,
     logo: logoSrcDe(),
     heroFoto: hasMedia('turnero-hero') ? '/media/turnero-hero' : '',
+    mapa: mapaEmbedSrc(ub),
+    mapaVisible: !(ub.visible===false || ub.mapaVisible===false),
     horarios: horarios,
     fotosProf: fotosProf
   };
