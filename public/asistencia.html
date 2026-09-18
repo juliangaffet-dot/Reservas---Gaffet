@@ -102,6 +102,10 @@
   .turno-nombre{font-weight:600;font-size:13.5px;}
   .turno-det{font-size:11.5px;color:var(--muted);margin-top:1px;}
   .turno-badge{font-size:9.5px;padding:3px 7px;border-radius:20px;background:var(--verde-bg);color:var(--verde-txt);font-weight:700;}
+  .wa-btn{flex-shrink:0;border:none;border-radius:10px;background:#25d366;color:white;font-family:inherit;font-size:11px;font-weight:700;padding:7px 10px;cursor:pointer;transition:.12s;}
+  .wa-btn:hover{background:#1eb955;}
+  .wa-btn.enviado{background:#e8f3e2;color:var(--verde-txt);}
+  .wa-sin{flex-shrink:0;font-size:10px;color:#b5ad9e;text-align:center;line-height:1.2;max-width:62px;}
   .ag-empty{text-align:center;padding:34px 16px;color:var(--muted);font-size:13px;background:white;border:1px solid var(--border);border-radius:12px;}
   .ag-empty .ico{font-size:30px;margin-bottom:8px;}
   .ag-note{text-align:center;font-size:10.5px;color:#b5ad9e;margin-top:10px;}
@@ -187,6 +191,7 @@
      </div>
      <div class="ag-lista" id="ag-lista"></div>
      <div class="ag-note">Tocá un turno para buscarlo en la planilla · se actualiza sola cada 2 minutos</div>
+     <div class="ag-note" id="ag-note-wa"></div>
    </aside>
   </div>
 </div>
@@ -205,7 +210,18 @@
   let mesActual=YEAR+'-'+MESES_NUM[new Date().getMonth()];
   let pacientes=[];
   let fechaAgenda=hoyISO();
+  let DIRECCION='Cmte. Piedrabuena 820';
+  // los recordatorios están en prueba: por ahora solo en la agenda de Julián
+  const RECORDATORIOS_PROF=['julian'];
+  (async()=>{
+    try{
+      const c=await (await fetch('/api/web')).json();
+      const u=c.ubicacion||{};
+      DIRECCION=u.direccion||DIRECCION;
+    }catch(e){}
+  })();
   const PROF_LBL={julian:'Lic. Julián Gaffet', mauro:'Lic. Mauro Ayub', esteban:'Lic. Esteban Videla'};
+  const PROF_NOMBRE={julian:'Julián', mauro:'Mauro', esteban:'Esteban'};
 
   function fechaHoy(){ const d=new Date(); return d.getDate()+'-'+MESES_FECHA[d.getMonth()]; }
   function hoyISO(){
@@ -316,7 +332,45 @@
     }catch(e){}
   }
 
+  // Pasa un teléfono argentino a formato de WhatsApp (549 + área + número)
+  function waNumero(tel){
+    let d=String(tel||'').replace(/\D/g,'');
+    if(!d) return null;
+    if(d.startsWith('54')) d=d.slice(2);
+    if(d.startsWith('9')) d=d.slice(1);
+    while(d.startsWith('0')) d=d.slice(1);
+    for(const len of [2,3,4]){                       // saca el 15 que va después del código de área
+      if(d.length>10 && d.slice(len,len+2)==='15'){ d=d.slice(0,len)+d.slice(len+2); break; }
+    }
+    return d.length===10 ? '549'+d : null;
+  }
+
+  function claveEnviado(t){ return 'kh_wa_'+fechaAgenda+'_'+t.id; }
+  function yaEnviado(t){ try{ return !!localStorage.getItem(claveEnviado(t)); }catch(e){ return false; } }
+
+  function mensajeRecordatorio(t){
+    const cuando = (fechaAgenda===hoyISO()) ? 'hoy' : 'el '+fmtFechaLarga(fechaAgenda);
+    const nombre = (t.nombre||'').split(' ')[0];
+    const prof = PROF_NOMBRE[profActual]||'';
+    return 'Hola '+nombre+'! ¿Cómo estás? 👋 Te recordamos tu turno '+cuando+' a las '+t.hora+
+           ' en Kine House con '+prof+', '+DIRECCION+' 📍. En caso de no poder concretar el turno, '+
+           'por favor cancelalo por esta vía. ¡Muchas gracias! 🙌';
+  }
+
+  function enviarRecordatorio(idx, ev){
+    if(ev) ev.stopPropagation();
+    const t=TURNOS_AGENDA[idx];
+    const num=waNumero(t.telefono);
+    if(!num) return;
+    try{ localStorage.setItem(claveEnviado(t),'1'); }catch(e){}
+    window.open('https://wa.me/'+num+'?text='+encodeURIComponent(mensajeRecordatorio(t)),'_blank');
+    renderAgenda(TURNOS_AGENDA);
+  }
+
+  let TURNOS_AGENDA=[];
+
   function renderAgenda(turnos){
+    TURNOS_AGENDA=turnos;
     const lista=document.getElementById('ag-lista');
     document.getElementById('res-total').textContent=turnos.length;
 
@@ -328,19 +382,35 @@
       if(siguiente) prox=siguiente.hora;
     }
     document.getElementById('res-prox').textContent=prox;
+    document.getElementById('ag-note-wa').textContent =
+      RECORDATORIOS_PROF.includes(profActual) ? 'Recordatorios por WhatsApp: en prueba, solo en esta agenda' : '';
 
     if(!turnos.length){
       lista.innerHTML='<div class="ag-empty"><div class="ico">🗓</div>No hay turnos para este día</div>';
       return;
     }
-    lista.innerHTML=turnos.map(t=>{
+    const conRecordatorio=RECORDATORIOS_PROF.includes(profActual);
+    lista.innerHTML=turnos.map((t,idx)=>{
       const det=t.acompanante?('+ '+t.acompanante):'';
+      let accion='';
+      if(conRecordatorio){
+        const num=waNumero(t.telefono);
+        if(num){
+          const ya=yaEnviado(t);
+          accion='<button class="wa-btn'+(ya?' enviado':'')+'" onclick="enviarRecordatorio('+idx+',event)" title="'
+            +(ya?'Ya le escribiste hoy. Podés mandarlo de nuevo.':'Mandar el recordatorio por WhatsApp')+'">'
+            +(ya?'✓ avisado':'WhatsApp')+'</button>';
+        } else {
+          accion='<div class="wa-sin">sin teléfono</div>';
+        }
+      }
       return '<div class="turno" onclick="buscarPaciente(\''+esc(t.nombre).replace(/'/g,"\\'")+'\')" title="Buscar en la planilla">'
         +'<div class="turno-hora">'+t.hora+'</div>'
         +'<div class="turno-info"><div class="turno-nombre">'+esc(t.nombre)+'</div>'
         +(det?'<div class="turno-det">'+esc(det)+'</div>':'')
         +'</div>'
         +(t.estado==='asistio'?'<span class="turno-badge">✓ asistió</span>':'')
+        +accion
         +'</div>';
     }).join('');
   }
