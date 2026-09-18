@@ -164,6 +164,18 @@
     .loc-btn:hover{border-color:var(--olive);}
     .loc-map{width:100%;height:300px;border:0;border-top:1px solid var(--line);display:block;}
 
+    /* pie de página, igual que en la landing */
+    .footer{padding:44px 0 38px;border-top:1px solid var(--line);margin-top:56px;}
+    .footer.pegado{margin-top:0;border-top:0;}
+    .footer-wrap{max-width:1120px;margin:0 auto;padding:0 22px;}
+    .footer-inner{display:flex;flex-wrap:wrap;justify-content:space-between;gap:22px;align-items:center;}
+    .footer-brand{display:flex;align-items:center;gap:11px;font-family:var(--display);font-size:19px;font-weight:600;color:var(--ink);text-decoration:none;}
+    .footer-brand .iso{width:34px;height:34px;border-radius:9px;background:#fff;padding:2px;border:1px solid var(--line);object-fit:contain;}
+    .footer-links{display:flex;gap:22px;flex-wrap:wrap;font-size:14px;color:var(--muted);}
+    .footer-links a{color:inherit;text-decoration:none;}
+    .footer-links a:hover{color:var(--ink);}
+    .footer-copy{margin-top:26px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+
     @media(min-width:768px){
       .loc-addr{font-size:38px;}
       .loc-head{margin-bottom:34px;}
@@ -303,6 +315,24 @@
     <iframe class="loc-map" id="kh-loc-map" title="Ubicación de Kine House" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
   </section>
 
+  <footer class="footer" id="kh-footer">
+    <div class="footer-wrap">
+      <div class="footer-inner">
+        <a href="/inicio" class="footer-brand"><img class="iso" id="kh-footer-logo" src="/03%20KINE%20ISO%20COMBINADO.png" alt="">Kine House</a>
+        <div class="footer-links">
+          <a href="/inicio">Inicio</a>
+          <a href="/inicio#servicios">Servicios</a>
+          <a href="/staff">Acceso equipo</a>
+          <a href="#kh-loc-band" id="kh-footer-ubic">Ubicación</a>
+        </div>
+      </div>
+      <div class="footer-copy">
+        <span>© <span id="kh-year"></span> Kine House · Rehabilitación &amp; Movimiento</span>
+        <span id="kh-footer-dir">Cmte. Piedrabuena 820, Salta, Argentina</span>
+      </div>
+    </div>
+  </footer>
+
 <script>
   // ── TEXTOS EDITABLES DESDE EL PANEL ───────────────────────────────────────
   // El servidor reemplaza estos valores por los que guardaste en /admin-web.
@@ -382,6 +412,20 @@
     var main = document.getElementById('kh-content');
     if (main) main.classList.add('con-mapa');
     band.classList.add('on');
+    document.getElementById('kh-footer').classList.add('pegado');
+  }
+
+  function pintarPie() {
+    document.getElementById('kh-year').textContent = new Date().getFullYear();
+    document.getElementById('kh-footer-dir').textContent = direccionCompleta();
+    if (CFG.logo) document.getElementById('kh-footer-logo').src = CFG.logo;
+    // si no hay mapa, el link de Ubicación va a Google Maps
+    if (CFG.mapaVisible === false || !CFG.mapa) {
+      var a = document.getElementById('kh-footer-ubic');
+      a.href = CFG.maps || '#';
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+    }
   }
 
   function fotoDe(profId) {
@@ -817,6 +861,7 @@
   // ── INIT ──────────────────────────────────────────────────────────────────
   pintarTextos();
   pintarUbicacion();
+  pintarPie();
   cargarProfesionales();
 </script>
 </body>
