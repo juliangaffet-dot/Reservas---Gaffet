@@ -45,6 +45,7 @@
 
     /* ── Contenido ──────────────────────────────────────────── */
     .content{max-width:640px;margin:0 auto;padding:26px 22px 60px;}
+    .content.con-mapa{padding-bottom:34px;}
     .step{display:none;}.step.active{display:block;}
     .tag{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:99px;background:var(--olive-soft);color:var(--olive-dark);margin-bottom:14px;}
     .tag .dot{width:6px;height:6px;border-radius:50%;background:var(--olive);flex-shrink:0;}
@@ -152,7 +153,21 @@
     .success-detail p:last-child{margin-bottom:0;}
     .success-nota{font-size:13.5px;color:var(--muted);margin-bottom:22px;}
 
+    /* franja de ubicación con mapa, igual que en la landing */
+    .loc-band{display:none;padding:30px 0 0;text-align:center;}
+    .loc-band.on{display:block;}
+    .loc-head{padding:0 22px;margin-bottom:26px;}
+    .loc-head .tag{margin-bottom:14px;}
+    .loc-addr{font-family:var(--display);font-size:27px;font-weight:600;letter-spacing:-0.02em;line-height:1.1;margin-bottom:5px;}
+    .loc-city{color:var(--muted);margin-bottom:20px;}
+    .loc-btn{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:99px;padding:12px 24px;text-decoration:none;transition:.15s;}
+    .loc-btn:hover{border-color:var(--olive);}
+    .loc-map{width:100%;height:300px;border:0;border-top:1px solid var(--line);display:block;}
+
     @media(min-width:768px){
+      .loc-addr{font-size:38px;}
+      .loc-head{margin-bottom:34px;}
+      .loc-map{height:420px;}
       .hero{padding:26px 22px 40px;}
       .hero-logo{width:62px;height:62px;}
       .hero-titulo{font-size:34px;}
@@ -185,7 +200,7 @@
     </div>
   </header>
 
-  <main class="content">
+  <main class="content" id="kh-content">
     <!-- PASO 0: elegir profesional -->
     <div id="step0" class="step active">
       <p class="tag"><span class="dot"></span> <span id="kh-label-prof">Elegí tu profesional</span></p>
@@ -278,6 +293,16 @@
     </div>
   </main>
 
+  <section class="loc-band" id="kh-loc-band">
+    <div class="loc-head">
+      <p class="tag"><span class="dot"></span> Ubicación</p>
+      <div class="loc-addr" id="kh-loc-addr">Cmte. Piedrabuena 820</div>
+      <div class="loc-city" id="kh-loc-city">Salta, Argentina</div>
+      <a class="loc-btn" id="kh-loc-btn" href="#" target="_blank" rel="noopener noreferrer">Cómo llegar ↗</a>
+    </div>
+    <iframe class="loc-map" id="kh-loc-map" title="Ubicación de Kine House" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+  </section>
+
 <script>
   // ── TEXTOS EDITABLES DESDE EL PANEL ───────────────────────────────────────
   // El servidor reemplaza estos valores por los que guardaste en /admin-web.
@@ -293,6 +318,8 @@
     maps: 'https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5',
     logo: '/03%20KINE%20ISO%20COMBINADO.png',
     heroFoto: '',
+    mapa: '',          // mapa embebido de la sección Ubicación
+    mapaVisible: true,
     horarios: null,
     fotosProf: {}
   };
@@ -344,6 +371,19 @@
       document.getElementById('kh-hero').classList.add('con-foto');
     }
   }
+  function pintarUbicacion() {
+    var band = document.getElementById('kh-loc-band');
+    if (!band) return;
+    if (CFG.mapaVisible === false || !CFG.mapa) return;   // sin mapa, la franja no se muestra
+    document.getElementById('kh-loc-addr').textContent = CFG.direccion || '';
+    document.getElementById('kh-loc-city').textContent = CFG.ciudad || '';
+    document.getElementById('kh-loc-btn').href = CFG.maps || '#';
+    document.getElementById('kh-loc-map').src = CFG.mapa;
+    var main = document.getElementById('kh-content');
+    if (main) main.classList.add('con-mapa');
+    band.classList.add('on');
+  }
+
   function fotoDe(profId) {
     return (CFG.fotosProf || {})[profId] || '';
   }
@@ -776,6 +816,7 @@
 
   // ── INIT ──────────────────────────────────────────────────────────────────
   pintarTextos();
+  pintarUbicacion();
   cargarProfesionales();
 </script>
 </body>
