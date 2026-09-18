@@ -217,8 +217,12 @@
         <div><label>Dirección</label><input type="text" id="ubicacion-direccion"></div>
         <div><label>Ciudad</label><input type="text" id="ubicacion-ciudad"></div>
       </div>
-      <label>Link de Google Maps</label>
+      <label>Link de Google Maps (el del botón "Ver en Google Maps")</label>
       <input type="text" id="ubicacion-maps">
+      <label class="switch" style="margin-top:16px;"><input type="checkbox" id="ubicacion-mapa-visible"> Mostrar el mapa en la web</label>
+      <label style="margin-top:12px;">Mapa embebido (opcional)</label>
+      <textarea id="ubicacion-mapa-embed" placeholder="Pegá acá el código que da Google Maps en Compartir → Insertar un mapa"></textarea>
+      <div class="muted-note">Si lo dejás vacío, el mapa se arma solo con la dirección de arriba. Si el punto no queda exacto, entrá a Google Maps, buscá el lugar, tocá Compartir, después "Insertar un mapa", copiá el código y pegalo acá.</div>
     </div>
 
     <!-- CTA -->
@@ -364,7 +368,7 @@ function pintar(){
   const no=cfg.nosotros||{}; setChk('nosotros-visible',no.visible);setVal('nosotros-titulo',no.titulo);setVal('nosotros-p1',no.p1);setVal('nosotros-p2',no.p2);
   const eq=cfg.equipo||{}; setChk('equipo-visible',eq.visible);setVal('equipo-titulo',eq.titulo);setVal('equipo-mensajeWa',eq.mensajeWa||'Hola {nombre}! Te escribo desde la web de Kine House. Quería hacerte una consulta.');
   renderEquipo(eq.items||[]);
-  const ub=cfg.ubicacion||{}; setChk('ubicacion-visible',ub.visible);setVal('ubicacion-direccion',ub.direccion);setVal('ubicacion-ciudad',ub.ciudad);setVal('ubicacion-maps',ub.maps);
+  const ub=cfg.ubicacion||{}; setChk('ubicacion-visible',ub.visible);setVal('ubicacion-direccion',ub.direccion);setVal('ubicacion-ciudad',ub.ciudad);setVal('ubicacion-maps',ub.maps);setChk('ubicacion-mapa-visible',ub.mapaVisible);setVal('ubicacion-mapa-embed',ub.mapaEmbed);
   const tu=cfg.turnero||{};
   document.getElementById('turnero-color-propio').checked = (tu.colorPropio === true);
   setVal('turnero-color', tu.color||cfg.color||'#8a8c52'); setVal('turnero-colorTxt', tu.color||cfg.color||'#8a8c52');
@@ -430,7 +434,7 @@ function recolectar(){
   cfg.servicios = Object.assign(cfg.servicios||{}, {visible:document.getElementById('servicios-visible').checked,titulo:val('servicios-titulo'),sub:val('servicios-sub')});
   cfg.nosotros = {visible:document.getElementById('nosotros-visible').checked,titulo:val('nosotros-titulo'),p1:val('nosotros-p1'),p2:val('nosotros-p2')};
   cfg.equipo = Object.assign(cfg.equipo||{}, {visible:document.getElementById('equipo-visible').checked,titulo:val('equipo-titulo'),mensajeWa:val('equipo-mensajeWa')});
-  cfg.ubicacion = {visible:document.getElementById('ubicacion-visible').checked,direccion:val('ubicacion-direccion'),ciudad:val('ubicacion-ciudad'),maps:val('ubicacion-maps')};
+  cfg.ubicacion = {visible:document.getElementById('ubicacion-visible').checked,direccion:val('ubicacion-direccion'),ciudad:val('ubicacion-ciudad'),maps:val('ubicacion-maps'),mapaVisible:document.getElementById('ubicacion-mapa-visible').checked,mapaEmbed:val('ubicacion-mapa-embed')};
   cfg.turnero = Object.assign(cfg.turnero||{}, {colorPropio:document.getElementById('turnero-color-propio').checked,color:val('turnero-colorTxt')||val('turnero-color'),titulo:val('turnero-titulo'),sub:val('turnero-sub'),labelProfesional:val('turnero-labelProfesional'),notaEmail:val('turnero-notaEmail'),exitoTitulo:val('turnero-exitoTitulo'),exitoNota:val('turnero-exitoNota')});
   cfg.cta = {titulo:val('cta-titulo'),sub:val('cta-sub')};
 }
