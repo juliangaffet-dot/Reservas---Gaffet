@@ -135,6 +135,22 @@
       <input type="text" id="servicios-sub">
       <div id="servicios-items" style="margin-top:14px;"></div>
       <button class="addbtn" onclick="addServicio()">+ Agregar servicio</button>
+      <label style="margin-top:18px;">Imagen de fondo de la sección (opcional)</label>
+      <div class="imgrow">
+        <img class="imgprev" id="prev-fondo-servicios" src="/media/fondo-servicios" onerror="this.style.opacity=.35">
+        <div>
+          <input type="file" id="file-fondo-servicios" accept="image/*" onchange="subirImg('fondo-servicios', this)">
+          <button class="imgdel" onclick="borrarImg('fondo-servicios')">Quitar fondo</button>
+        </div>
+      </div>
+      <label>Cuánto se ve la imagen</label>
+      <select id="servicios-velo">
+        <option value="fuerte">Apenas se ve</option>
+        <option value="medio">Se ve suave</option>
+        <option value="suave">Se ve bastante</option>
+        <option value="sinvelo">Se ve entera</option>
+      </select>
+
     </div>
 
     <!-- NOSOTROS -->
@@ -151,6 +167,21 @@
         <img class="imgprev" id="prev-nosotros" src="/media/nosotros" onerror="this.style.opacity=.4">
         <div><input type="file" id="file-nosotros" accept="image/*" onchange="subirImg('nosotros', this)"></div>
       </div>
+      <label style="margin-top:18px;">Imagen de fondo de la sección (opcional)</label>
+      <div class="imgrow">
+        <img class="imgprev" id="prev-fondo-nosotros" src="/media/fondo-nosotros" onerror="this.style.opacity=.35">
+        <div>
+          <input type="file" id="file-fondo-nosotros" accept="image/*" onchange="subirImg('fondo-nosotros', this)">
+          <button class="imgdel" onclick="borrarImg('fondo-nosotros')">Quitar fondo</button>
+        </div>
+      </div>
+      <label>Cuánto se ve la imagen</label>
+      <select id="nosotros-velo">
+        <option value="fuerte">Apenas se ve</option>
+        <option value="medio">Se ve suave</option>
+        <option value="suave">Se ve bastante</option>
+        <option value="sinvelo">Se ve entera</option>
+      </select>
     </div>
 
     <!-- EQUIPO -->
@@ -163,6 +194,21 @@
       <div class="muted-note">Es el texto que ya aparece escrito cuando el paciente toca "Contactar" → WhatsApp. Donde pongas {nombre} se reemplaza por el nombre de cada profesional. Si lo dejás vacío, se usa el mensaje de ejemplo.</div>
       <div id="equipo-items" style="margin-top:14px;"></div>
       <button class="addbtn" onclick="addMiembro()">+ Agregar integrante</button>
+      <label style="margin-top:18px;">Imagen de fondo de la sección (opcional)</label>
+      <div class="imgrow">
+        <img class="imgprev" id="prev-fondo-equipo" src="/media/fondo-equipo" onerror="this.style.opacity=.35">
+        <div>
+          <input type="file" id="file-fondo-equipo" accept="image/*" onchange="subirImg('fondo-equipo', this)">
+          <button class="imgdel" onclick="borrarImg('fondo-equipo')">Quitar fondo</button>
+        </div>
+      </div>
+      <label>Cuánto se ve la imagen</label>
+      <select id="equipo-velo">
+        <option value="fuerte">Apenas se ve</option>
+        <option value="medio">Se ve suave</option>
+        <option value="suave">Se ve bastante</option>
+        <option value="sinvelo">Se ve entera</option>
+      </select>
     </div>
 
     <!-- TURNERO -->
@@ -222,6 +268,21 @@
       <label class="switch" style="margin-top:16px;"><input type="checkbox" id="ubicacion-mapa-visible"> Mostrar el mapa en la web</label>
       <label style="margin-top:12px;">Mapa embebido (opcional)</label>
       <textarea id="ubicacion-mapa-embed" placeholder="Pegá acá el código que da Google Maps en Compartir → Insertar un mapa"></textarea>
+      <label style="margin-top:18px;">Imagen de fondo de la sección (opcional)</label>
+      <div class="imgrow">
+        <img class="imgprev" id="prev-fondo-ubicacion" src="/media/fondo-ubicacion" onerror="this.style.opacity=.35">
+        <div>
+          <input type="file" id="file-fondo-ubicacion" accept="image/*" onchange="subirImg('fondo-ubicacion', this)">
+          <button class="imgdel" onclick="borrarImg('fondo-ubicacion')">Quitar fondo</button>
+        </div>
+      </div>
+      <label>Cuánto se ve la imagen</label>
+      <select id="ubicacion-velo">
+        <option value="fuerte">Apenas se ve</option>
+        <option value="medio">Se ve suave</option>
+        <option value="suave">Se ve bastante</option>
+        <option value="sinvelo">Se ve entera</option>
+      </select>
       <div class="muted-note">Si lo dejás vacío, el mapa se arma solo con la dirección de arriba. Si el punto no queda exacto, entrá a Google Maps, buscá el lugar, tocá Compartir, después "Insertar un mapa", copiá el código y pegalo acá.</div>
     </div>
 
@@ -232,6 +293,21 @@
       <input type="text" id="cta-titulo">
       <label>Subtítulo</label>
       <input type="text" id="cta-sub">
+      <label style="margin-top:18px;">Imagen de fondo de la sección (opcional)</label>
+      <div class="imgrow">
+        <img class="imgprev" id="prev-fondo-cta" src="/media/fondo-cta" onerror="this.style.opacity=.35">
+        <div>
+          <input type="file" id="file-fondo-cta" accept="image/*" onchange="subirImg('fondo-cta', this)">
+          <button class="imgdel" onclick="borrarImg('fondo-cta')">Quitar fondo</button>
+        </div>
+      </div>
+      <label>Cuánto se ve la imagen</label>
+      <select id="cta-velo">
+        <option value="fuerte">Apenas se ve</option>
+        <option value="medio">Se ve suave</option>
+        <option value="suave">Se ve bastante</option>
+        <option value="sinvelo">Se ve entera</option>
+      </select>
     </div>
 
     <button class="btn btn-save" style="width:100%;background:var(--olive-dark);color:#fff;padding:15px;font-size:15px;" onclick="guardar()">💾 Guardar todos los cambios</button>
@@ -377,6 +453,9 @@ function pintar(){
   setVal('turnero-notaEmail',tu.notaEmail);setVal('turnero-exitoTitulo',tu.exitoTitulo);setVal('turnero-exitoNota',tu.exitoNota);
   renderHorarios();
   const ct=cfg.cta||{}; setVal('cta-titulo',ct.titulo);setVal('cta-sub',ct.sub);
+  [['servicios',se],['nosotros',no],['equipo',eq],['ubicacion',ub],['cta',ct]].forEach(([k,o])=>{
+    const el=document.getElementById(k+'-velo'); if(el) el.value = o.fondoVelo || 'medio';
+  });
 }
 
 // sincronizar color picker <-> texto
@@ -437,6 +516,9 @@ function recolectar(){
   cfg.ubicacion = {visible:document.getElementById('ubicacion-visible').checked,direccion:val('ubicacion-direccion'),ciudad:val('ubicacion-ciudad'),maps:val('ubicacion-maps'),mapaVisible:document.getElementById('ubicacion-mapa-visible').checked,mapaEmbed:val('ubicacion-mapa-embed')};
   cfg.turnero = Object.assign(cfg.turnero||{}, {colorPropio:document.getElementById('turnero-color-propio').checked,color:val('turnero-colorTxt')||val('turnero-color'),titulo:val('turnero-titulo'),sub:val('turnero-sub'),labelProfesional:val('turnero-labelProfesional'),notaEmail:val('turnero-notaEmail'),exitoTitulo:val('turnero-exitoTitulo'),exitoNota:val('turnero-exitoNota')});
   cfg.cta = {titulo:val('cta-titulo'),sub:val('cta-sub')};
+  ['servicios','nosotros','equipo','ubicacion','cta'].forEach(k=>{
+    const el=document.getElementById(k+'-velo'); if(el){ cfg[k]=cfg[k]||{}; cfg[k].fondoVelo=el.value; }
+  });
 }
 
 async function guardar(){
