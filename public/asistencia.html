@@ -114,6 +114,18 @@
     .agenda{width:100%;position:static;}
     .ag-lista{max-height:none;}
   }
+  .wa-modal{position:fixed;inset:0;background:rgba(28,28,30,0.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .wa-modal.show{display:flex;}
+  .wa-box{background:white;border-radius:16px;padding:20px;max-width:420px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,0.2);}
+  .wa-box h3{font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:4px;}
+  .wa-box p.sub{font-size:12.5px;color:var(--muted);margin-bottom:12px;}
+  .wa-box textarea{width:100%;height:190px;border:1px solid var(--border);border-radius:10px;padding:12px;font-family:inherit;font-size:13px;line-height:1.5;resize:vertical;background:#fdfcf9;color:var(--dark);}
+  .wa-acciones{display:flex;gap:8px;margin-top:12px;}
+  .wa-acciones button{flex:1;padding:12px;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+  .wa-copiar{background:var(--accent);color:white;}
+  .wa-abrir{background:#25d366;color:white;}
+  .wa-cerrar{background:none;border:1px solid var(--border) !important;color:var(--muted);flex:0 0 auto !important;padding:12px 16px !important;}
+  .wa-estado{font-size:12px;color:var(--verde-txt);margin-top:8px;min-height:16px;text-align:center;}
   .saving{position:fixed;bottom:16px;right:16px;background:var(--green);color:white;padding:8px 16px;border-radius:99px;font-size:12px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;}
   .saving.show{opacity:1;}
 </style>
@@ -197,6 +209,20 @@
 </div>
 
 <div class="saving" id="saving">Guardando...</div>
+
+<div class="wa-modal" id="wa-modal">
+  <div class="wa-box">
+    <h3 id="wa-titulo">Recordatorio</h3>
+    <p class="sub">Copialo y pegalo en el chat. Si algo no te gusta, podés editarlo acá antes de copiar.</p>
+    <textarea id="wa-texto"></textarea>
+    <div class="wa-estado" id="wa-estado"></div>
+    <div class="wa-acciones">
+      <button class="wa-copiar" onclick="copiarDelModal()">Copiar</button>
+      <button class="wa-abrir" onclick="abrirChat()">Abrir WhatsApp</button>
+      <button class="wa-cerrar" onclick="cerrarModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
 
 <script>
   const MESES_NUM=['01','02','03','04','05','06','07','08','09','10','11','12'];
@@ -383,9 +409,12 @@
     ].join('\n');
   }
 
-  function copiarTexto(texto){
+  async function copiarTexto(texto){
     try{
-      if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(texto); return true; }
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(texto);   // ahora sí espera la confirmación
+        return true;
+      }
     }catch(e){}
     try{
       const ta=document.createElement('textarea');
@@ -405,24 +434,45 @@
     el._t=setTimeout(()=>{ el.classList.remove('show'); el.textContent='Guardando...'; }, 3500);
   }
 
-  function enviarRecordatorio(idx, ev){
+  let WA_NUM_ACTUAL='';
+
+  async function enviarRecordatorio(idx, ev){
     if(ev) ev.stopPropagation();
     const t=TURNOS_AGENDA[idx];
     const num=waNumero(t.telefono);
     if(!num) return;
     try{ localStorage.setItem(claveEnviado(t),'1'); }catch(e){}
-    if(MODO_ENVIO==='link'){
-      // el mensaje va escrito en el chat, sin emojis (los rompe el link)
-      window.open('https://wa.me/'+num+'?text='+encodeURIComponent(mensajeRecordatorio(t,false)),'_blank');
-    } else {
-      // el mensaje completo va por el portapapeles: los emojis llegan intactos
-      const ok=copiarTexto(mensajeRecordatorio(t,true));
-      avisar(ok ? '\u2713 Mensaje copiado \u00b7 pegalo en el chat y envialo'
-                : 'No se pudo copiar \u00b7 escribilo a mano');
-      window.open('https://wa.me/'+num,'_blank');
-    }
     renderAgenda(TURNOS_AGENDA);
+
+    if(MODO_ENVIO==='link'){
+      // el mensaje ya va escrito en el chat, sin emojis (los rompe el link)
+      window.open('https://wa.me/'+num+'?text='+encodeURIComponent(mensajeRecordatorio(t,false)),'_blank');
+      return;
+    }
+
+    // Modo copiar: el mensaje queda a la vista, se copia y desde ahí abrís el chat
+    WA_NUM_ACTUAL=num;
+    const texto=mensajeRecordatorio(t,true);
+    document.getElementById('wa-titulo').textContent='Recordatorio para '+(t.nombre||'');
+    document.getElementById('wa-texto').value=texto;
+    document.getElementById('wa-estado').textContent='';
+    document.getElementById('wa-modal').classList.add('show');
+    const ok=await copiarTexto(texto);
+    document.getElementById('wa-estado').textContent = ok
+      ? '\u2713 Copiado. Abrí WhatsApp y pegalo con Cmd+V (en el celular, mantené apretado y "Pegar").'
+      : 'No se pudo copiar solo: seleccioná el texto de arriba y copialo a mano.';
   }
+
+  async function copiarDelModal(){
+    const ok=await copiarTexto(document.getElementById('wa-texto').value);
+    document.getElementById('wa-estado').textContent = ok
+      ? '\u2713 Copiado.'
+      : 'No se pudo copiar: seleccioná el texto y copialo a mano.';
+  }
+  function abrirChat(){
+    if(WA_NUM_ACTUAL) window.open('https://wa.me/'+WA_NUM_ACTUAL,'_blank');
+  }
+  function cerrarModal(){ document.getElementById('wa-modal').classList.remove('show'); }
 
   let TURNOS_AGENDA=[];
 
