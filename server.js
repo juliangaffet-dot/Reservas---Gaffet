@@ -166,7 +166,9 @@ const DEFAULT_WEB = {
     visible: true,
     direccion: "Cmte. Piedrabuena 820",
     ciudad: "Salta, Argentina",
-    maps: "https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5"
+    maps: "https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5",
+    mapaVisible: true,
+    mapaEmbed: ""   // opcional: pegar el c\u00f3digo "Insertar un mapa" de Google Maps
   },
   horarios: DEFAULT_HORARIOS,
   turnero: {
@@ -820,6 +822,21 @@ function lighten(hex, f){
 function colorPrincipal(cfg){
   return (cfg.color && /^#?[a-f\d]{6}$/i.test(String(cfg.color).replace('#',''))) ? (cfg.color[0]==='#'?cfg.color:'#'+cfg.color) : '#8a8c52';
 }
+// Devuelve la URL para el <iframe> del mapa.
+// Si en el panel pegaron el código "Insertar un mapa" de Google, se usa ese src.
+// Si no, se arma uno con la dirección (no necesita API key).
+function mapaEmbedSrc(ub){
+  const pegado = String((ub && ub.mapaEmbed) || '').trim();
+  if (pegado) {
+    const m = /src\s*=\s*["']([^"']+)["']/i.exec(pegado);
+    const url = m ? m[1] : pegado;
+    if (/^https:\/\/(www\.)?google\.[a-z.]+\/maps\/embed|^https:\/\/maps\.google\.[a-z.]+\/maps\?/i.test(url)) return url;
+  }
+  const dir = [ub && ub.direccion, ub && ub.ciudad].filter(Boolean).join(', ')
+    || (DEFAULT_WEB.ubicacion.direccion + ', ' + DEFAULT_WEB.ubicacion.ciudad);
+  return 'https://maps.google.com/maps?q=' + encodeURIComponent(dir) + '&z=16&hl=es&output=embed';
+}
+
 function logoSrcDe(){ return hasMedia('logo') ? '/media/logo' : '/03%20KINE%20ISO%20COMBINADO.png'; }
 
 // ─── RENDER DE LA LANDING DESDE LA CONFIG ────────────────────────────────────
@@ -897,13 +914,18 @@ function renderLanding(cfg){
     </div>
   </section>`;
 
+  const mapaHTML = (ub.visible===false || ub.mapaVisible===false) ? '' : `
+    <iframe class="loc-map" src="${esc(mapaEmbedSrc(ub))}" title="Ubicación de Kine House" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>`;
   const secUbic = ub.visible===false ? '' : `
-        <div class="close-loc">
-          <span class="tag"><span class="dot"></span> Ubicación</span>
-          <div class="addr">${esc(ub.direccion)}</div>
-          <div class="city">${esc(ub.ciudad)}</div>
-          <a href="${esc(ub.maps)}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Ver en Google Maps ↗</a>
-        </div>`;
+  <section class="loc-band" id="ubicacion">
+    <div class="wrap loc-head">
+      <span class="tag"><span class="dot"></span> Ubicación</span>
+      <h2 class="addr">${esc(ub.direccion)}</h2>
+      <div class="city">${esc(ub.ciudad)}</div>
+      <a href="${esc(ub.maps)}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Cómo llegar ↗</a>
+    </div>
+${mapaHTML}
+  </section>`;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -1004,15 +1026,20 @@ function renderLanding(cfg){
     .tcopt.wa{background:#25d366;color:#fff;}
     .tcopt.wa:hover{background:#1eb955;}
     @media(max-width:720px){ .team-grid{flex-direction:column;} .tmember{width:100%;margin-bottom:14px;} }
-    .close{display:flex;justify-content:space-between;}
-    .close-cta{width:57%;background:linear-gradient(150deg,var(--ink),var(--olive-deep));color:#fff;border-radius:30px;padding:52px 46px;position:relative;overflow:hidden;}
+    .close{display:block;}
+    .close-cta{width:100%;background:linear-gradient(150deg,var(--ink),var(--olive-deep));color:#fff;border-radius:30px;padding:52px 46px;position:relative;overflow:hidden;}
     .close-cta .blob{position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(199,100,60,0.25);top:-70px;right:-50px;filter:blur(6px);}
     .close-cta h2{font-family:var(--display);font-weight:600;font-size:34px;letter-spacing:-0.02em;margin-bottom:12px;position:relative;line-height:1.1;}
     .close-cta p{color:rgba(255,255,255,0.75);font-weight:300;margin-bottom:28px;position:relative;}
     .close-cta .btn-primary{background:#fff;color:var(--ink);position:relative;}
-    .close-loc{width:40%;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:40px 34px;display:flex;flex-direction:column;justify-content:center;}
-    .close-loc .tag{margin-bottom:16px;} .close-loc .addr{font-family:var(--display);font-size:22px;font-weight:600;margin-bottom:4px;} .close-loc .city{color:var(--muted);margin-bottom:22px;}
-    @media(max-width:760px){ .close{flex-direction:column;} .close-cta,.close-loc{width:100%;padding:36px 28px;margin-bottom:16px;} .close-cta h2{font-size:28px;} }
+    .loc-band{padding:26px 0 0;}
+    .loc-head{text-align:center;margin-bottom:38px;}
+    .loc-head .tag{margin-bottom:16px;}
+    .loc-head .addr{font-family:var(--display);font-size:38px;font-weight:600;letter-spacing:-0.02em;line-height:1.1;margin-bottom:6px;}
+    .loc-head .city{color:var(--muted);margin-bottom:24px;}
+    .loc-map{width:100%;height:440px;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:block;}
+    @media(max-width:760px){ .close-cta{padding:36px 28px;} .close-cta h2{font-size:28px;}
+      .loc-band{padding-top:14px;} .loc-head{margin-bottom:28px;} .loc-head .addr{font-size:27px;} .loc-map{height:300px;} }
     .footer{padding:50px 0 40px;border-top:1px solid var(--line);margin-top:80px;}
     .footer-inner{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px;align-items:center;}
     .footer-brand{display:flex;align-items:center;gap:11px;font-family:var(--display);font-size:19px;font-weight:600;}
@@ -1057,12 +1084,12 @@ ${secEquipo}
           <p>${esc(ct.sub)}</p>
           <a href="/" class="btn btn-primary">Agendar un turno →</a>
         </div>
-${secUbic}
       </div>
     </div>
   </section>
+${secUbic}
 
-  <footer class="footer">
+  <footer class="footer"${(ub.visible!==false && ub.mapaVisible!==false) ? ' style="margin-top:0;"' : ''}>
     <div class="wrap">
       <div class="footer-inner">
         <a href="#top" class="footer-brand"><img class="iso" src="${logoSrc}" alt="">Kine House</a>
