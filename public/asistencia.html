@@ -213,9 +213,12 @@
   let DIRECCION='Cmte. Piedrabuena 820';
   // los recordatorios están en prueba: por ahora solo en la agenda de Julián
   const RECORDATORIOS_PROF=['julian'];
-  // Si WhatsApp te muestra rombos negros en vez de emojis, poné esto en false:
-  // el mensaje sale igual de ordenado, con negritas y párrafos, pero sin emojis.
-  const EMOJIS_EN_MENSAJE = true;
+  // Cómo se manda el recordatorio:
+  //   'copiar' → copia el mensaje completo (con emojis) y abre el chat vacío. Pegás con Cmd+V y mandás.
+  //              Es el único modo en que los emojis llegan siempre bien.
+  //   'link'   → el mensaje ya va escrito en el chat, listo para enviar, pero SIN emojis,
+  //              porque WhatsApp de escritorio los rompe cuando vienen en el link.
+  const MODO_ENVIO = 'copiar';
   (async()=>{
     try{
       const c=await (await fetch('/api/web')).json();
@@ -362,11 +365,11 @@
     gracias:'\uD83D\uDE4C'       // 🙌
   };
 
-  function mensajeRecordatorio(t){
+  function mensajeRecordatorio(t, conEmojis){
     const cuando = (fechaAgenda===hoyISO()) ? 'hoy' : fmtFechaLarga(fechaAgenda);
     const nombre = (t.nombre||'').split(' ')[0];
     const prof = PROF_NOMBRE[profActual]||'';
-    const e = k => EMOJIS_EN_MENSAJE ? (EMO[k]+' ') : '';
+    const e = k => conEmojis ? (EMO[k]+' ') : '';
     return [
       e('saludo')+'*\u00a1Hola '+nombre+'!* \u00bfC\u00f3mo est\u00e1s?',
       '',
@@ -376,8 +379,30 @@
       '',
       e('aviso')+'Si no pod\u00e9s concretar el turno, avisanos por esta v\u00eda as\u00ed liberamos el lugar.',
       '',
-      '\u00a1Muchas gracias!'+(EMOJIS_EN_MENSAJE ? ' '+EMO.gracias : '')
+      '\u00a1Muchas gracias!'+(conEmojis ? ' '+EMO.gracias : '')
     ].join('\n');
+  }
+
+  function copiarTexto(texto){
+    try{
+      if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(texto); return true; }
+    }catch(e){}
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=texto; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      const ok=document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e){ return false; }
+  }
+
+  function avisar(texto){
+    const el=document.getElementById('saving');
+    el.textContent=texto;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t=setTimeout(()=>{ el.classList.remove('show'); el.textContent='Guardando...'; }, 3500);
   }
 
   function enviarRecordatorio(idx, ev){
@@ -385,12 +410,17 @@
     const t=TURNOS_AGENDA[idx];
     const num=waNumero(t.telefono);
     if(!num) return;
-    const texto=mensajeRecordatorio(t);
     try{ localStorage.setItem(claveEnviado(t),'1'); }catch(e){}
-    // Copia de respaldo: si WhatsApp de escritorio rompe los emojis del link,
-    // borrás lo que se pegó solo y pegás esto con Cmd+V, que va intacto.
-    try{ if(navigator.clipboard) navigator.clipboard.writeText(texto); }catch(e){}
-    window.open('https://wa.me/'+num+'?text='+encodeURIComponent(texto),'_blank');
+    if(MODO_ENVIO==='link'){
+      // el mensaje va escrito en el chat, sin emojis (los rompe el link)
+      window.open('https://wa.me/'+num+'?text='+encodeURIComponent(mensajeRecordatorio(t,false)),'_blank');
+    } else {
+      // el mensaje completo va por el portapapeles: los emojis llegan intactos
+      const ok=copiarTexto(mensajeRecordatorio(t,true));
+      avisar(ok ? '\u2713 Mensaje copiado \u00b7 pegalo en el chat y envialo'
+                : 'No se pudo copiar \u00b7 escribilo a mano');
+      window.open('https://wa.me/'+num,'_blank');
+    }
     renderAgenda(TURNOS_AGENDA);
   }
 
@@ -411,7 +441,9 @@
     document.getElementById('res-prox').textContent=prox;
     document.getElementById('ag-note-wa').textContent =
       RECORDATORIOS_PROF.includes(profActual)
-        ? 'Recordatorios por WhatsApp: en prueba, solo en esta agenda · el mensaje queda copiado, si se ven rombos pegalo con Cmd+V'
+        ? (MODO_ENVIO==='copiar'
+            ? 'Recordatorios por WhatsApp: en prueba, solo en esta agenda · el mensaje se copia solo, pegalo en el chat con Cmd+V'
+            : 'Recordatorios por WhatsApp: en prueba, solo en esta agenda')
         : '';
 
     if(!turnos.length){
@@ -427,8 +459,8 @@
         if(num){
           const ya=yaEnviado(t);
           accion='<button class="wa-btn'+(ya?' enviado':'')+'" onclick="enviarRecordatorio('+idx+',event)" title="'
-            +(ya?'Ya le escribiste hoy. Podés mandarlo de nuevo.':'Mandar el recordatorio por WhatsApp')+'">'
-            +(ya?'✓ avisado':'WhatsApp')+'</button>';
+            +(ya?'Ya le escribiste hoy. Podés mandarlo de nuevo.':(MODO_ENVIO==='copiar'?'Copia el mensaje y abre el chat':'Abre el chat con el mensaje escrito'))+'">'
+            +(ya?'\u2713 avisado':(MODO_ENVIO==='copiar'?'Copiar y abrir':'WhatsApp'))+'</button>';
         } else {
           accion='<div class="wa-sin">sin teléfono</div>';
         }
