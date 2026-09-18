@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Asistencia — Kine House</title>
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -75,6 +77,39 @@
   .del-btn:hover{color:var(--rojo);}
   .add-row{padding:12px;text-align:center;}
   .add-row button{background:none;border:1px dashed var(--accent);color:var(--accent);padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;}
+  /* ── planilla + agenda, una al lado de la otra ── */
+  .layout{display:flex;gap:16px;align-items:flex-start;}
+  .col-planilla{flex:1;min-width:0;}
+  .agenda{width:320px;flex-shrink:0;position:sticky;top:20px;}
+  .ag-hdr{background:var(--green);border-radius:14px;padding:14px 16px;color:white;margin-bottom:10px;}
+  .ag-hdr-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+  .ag-hdr h2{font-family:'DM Serif Display',serif;font-size:18px;}
+  .ag-fecha{font-size:12.5px;color:#9FE1CB;text-transform:capitalize;}
+  .ag-prof{font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px;}
+  .day-nav{display:flex;gap:5px;}
+  .day-nav button{width:28px;height:28px;border:none;border-radius:8px;background:rgba(255,255,255,0.14);color:white;cursor:pointer;font-size:14px;}
+  .day-nav button:hover{background:rgba(255,255,255,0.26);}
+  .hoy-btn{padding:0 10px !important;width:auto !important;font-size:11.5px !important;font-weight:600;}
+  .resumen{display:flex;gap:8px;margin-bottom:10px;}
+  .res-card{flex:1;background:white;border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center;}
+  .res-num{font-family:'DM Serif Display',serif;font-size:21px;color:var(--green);}
+  .res-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .ag-lista{max-height:calc(100vh - 260px);overflow-y:auto;padding-right:2px;}
+  .turno{display:flex;align-items:center;gap:10px;background:white;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:.12s;}
+  .turno:hover{border-color:var(--accent);background:#fffdf6;}
+  .turno-hora{font-family:'DM Serif Display',serif;font-size:16px;color:var(--green);min-width:46px;}
+  .turno-info{flex:1;min-width:0;}
+  .turno-nombre{font-weight:600;font-size:13.5px;}
+  .turno-det{font-size:11.5px;color:var(--muted);margin-top:1px;}
+  .turno-badge{font-size:9.5px;padding:3px 7px;border-radius:20px;background:var(--verde-bg);color:var(--verde-txt);font-weight:700;}
+  .ag-empty{text-align:center;padding:34px 16px;color:var(--muted);font-size:13px;background:white;border:1px solid var(--border);border-radius:12px;}
+  .ag-empty .ico{font-size:30px;margin-bottom:8px;}
+  .ag-note{text-align:center;font-size:10.5px;color:#b5ad9e;margin-top:10px;}
+  @media(max-width:1180px){
+    .layout{flex-direction:column;}
+    .agenda{width:100%;position:static;}
+    .ag-lista{max-height:none;}
+  }
   .saving{position:fixed;bottom:16px;right:16px;background:var(--green);color:white;padding:8px 16px;border-radius:99px;font-size:12px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;}
   .saving.show{opacity:1;}
 </style>
@@ -106,6 +141,8 @@
     <div class="ptab" data-prof="esteban" onclick="setProf('esteban',this)">Esteban Videla</div>
   </div>
 
+  <div class="layout">
+   <div class="col-planilla">
   <div class="toolbar">
     <input class="search" id="buscar" placeholder="🔍 Buscar paciente..." oninput="render()">
     <div class="legend">
@@ -120,14 +157,37 @@
       <table>
         <thead><tr>
           <th class="num-col">#</th><th class="name-col">Nombre y Apellido</th>
-          <th class="os-col">Obra Social</th><th class="ses-col">Sesiones</th><th class="tel-col">Teléfono</th>
+          <th class="os-col">Obra Social</th><th class="ses-col">Sesiones</th>
           <th class="asist-col" colspan="10">Asistencia — escribí la fecha o "hoy"</th>
-          <th class="obs-col">Observaciones</th><th class="del-col"></th>
+          <th class="del-col"></th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
     <div class="add-row"><button onclick="addRow()">+ Agregar paciente</button></div>
+  </div>
+   </div>
+
+   <aside class="agenda">
+     <div class="ag-hdr">
+       <div class="ag-hdr-top">
+         <h2>Agenda</h2>
+         <div class="day-nav">
+           <button onclick="cambiarDia(-1)" title="Día anterior">‹</button>
+           <button class="hoy-btn" onclick="irHoy()">Hoy</button>
+           <button onclick="cambiarDia(1)" title="Día siguiente">›</button>
+         </div>
+       </div>
+       <div class="ag-fecha" id="ag-fecha"></div>
+       <div class="ag-prof" id="ag-prof"></div>
+     </div>
+     <div class="resumen">
+       <div class="res-card"><div class="res-num" id="res-total">–</div><div class="res-lbl">Turnos</div></div>
+       <div class="res-card"><div class="res-num" id="res-prox">–</div><div class="res-lbl">Próximo</div></div>
+     </div>
+     <div class="ag-lista" id="ag-lista"></div>
+     <div class="ag-note">Tocá un turno para buscarlo en la planilla · se actualiza sola cada 2 minutos</div>
+   </aside>
   </div>
 </div>
 
@@ -144,8 +204,20 @@
   let profActual='julian';
   let mesActual=YEAR+'-'+MESES_NUM[new Date().getMonth()];
   let pacientes=[];
+  let fechaAgenda=hoyISO();
+  const PROF_LBL={julian:'Lic. Julián Gaffet', mauro:'Lic. Mauro Ayub', esteban:'Lic. Esteban Videla'};
 
   function fechaHoy(){ const d=new Date(); return d.getDate()+'-'+MESES_FECHA[d.getMonth()]; }
+  function hoyISO(){
+    const d=new Date(new Date().getTime() - 3*60*60*1000);
+    return d.toISOString().substring(0,10);
+  }
+  function fmtFechaLarga(iso){
+    const d=new Date(iso+'T12:00:00');
+    const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return dias[d.getDay()]+' '+d.getDate()+' de '+meses[d.getMonth()];
+  }
 
   async function login(){
     const p=document.getElementById('pass').value;
@@ -157,6 +229,7 @@
       document.getElementById('app').style.display='block';
       buildMeses();
       cargar();
+      arrancarAgenda();
     } else {
       document.getElementById('login-err').style.display='block';
     }
@@ -172,6 +245,7 @@
           document.getElementById('app').style.display='block';
           buildMeses();
           cargar();
+          arrancarAgenda();
         }
       }
     }catch(e){}
@@ -204,6 +278,7 @@
     document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
     el.classList.add('active');
     cargar();
+    cargarAgenda();
   }
 
   async function cargar(){
@@ -216,6 +291,66 @@
       return { id:p.id, n:p.nombre, os:p.obra_social, ses:p.sesiones_autorizadas, tel:p.telefono, obs:p.observaciones, dias };
     });
     render();
+  }
+
+  function arrancarAgenda(){
+    cargarAgenda();
+    setInterval(cargarAgenda, 2*60*1000);
+  }
+  function cambiarDia(n){
+    const d=new Date(fechaAgenda+'T12:00:00');
+    d.setDate(d.getDate()+n);
+    fechaAgenda=d.toISOString().substring(0,10);
+    cargarAgenda();
+  }
+  function irHoy(){ fechaAgenda=hoyISO(); cargarAgenda(); }
+
+  async function cargarAgenda(){
+    document.getElementById('ag-fecha').textContent=fmtFechaLarga(fechaAgenda);
+    document.getElementById('ag-prof').textContent=PROF_LBL[profActual]||'';
+    try{
+      const r=await fetch('/api/asistencia?fecha='+fechaAgenda+'&profesional='+profActual,{headers:{'x-panel-password':PASSWORD}});
+      if(!r.ok) return;
+      const data=await r.json();
+      renderAgenda((data.turnos||[]).filter(t=>t.estado!=='cancelado'));
+    }catch(e){}
+  }
+
+  function renderAgenda(turnos){
+    const lista=document.getElementById('ag-lista');
+    document.getElementById('res-total').textContent=turnos.length;
+
+    let prox='–';
+    if(fechaAgenda===hoyISO()){
+      const ahora=new Date(new Date().getTime()-3*60*60*1000);
+      const hhmm=String(ahora.getUTCHours()).padStart(2,'0')+':'+String(ahora.getUTCMinutes()).padStart(2,'0');
+      const siguiente=turnos.find(t=>t.hora>=hhmm);
+      if(siguiente) prox=siguiente.hora;
+    }
+    document.getElementById('res-prox').textContent=prox;
+
+    if(!turnos.length){
+      lista.innerHTML='<div class="ag-empty"><div class="ico">🗓</div>No hay turnos para este día</div>';
+      return;
+    }
+    lista.innerHTML=turnos.map(t=>{
+      const det=t.acompanante?('+ '+t.acompanante):'';
+      return '<div class="turno" onclick="buscarPaciente(\''+esc(t.nombre).replace(/'/g,"\\'")+'\')" title="Buscar en la planilla">'
+        +'<div class="turno-hora">'+t.hora+'</div>'
+        +'<div class="turno-info"><div class="turno-nombre">'+esc(t.nombre)+'</div>'
+        +(det?'<div class="turno-det">'+esc(det)+'</div>':'')
+        +'</div>'
+        +(t.estado==='asistio'?'<span class="turno-badge">✓ asistió</span>':'')
+        +'</div>';
+    }).join('');
+  }
+
+  // Al tocar un turno, se filtra la planilla por ese nombre
+  function buscarPaciente(nombre){
+    const inp=document.getElementById('buscar');
+    inp.value=(nombre||'').split(' ')[0];
+    render();
+    inp.focus();
   }
 
   function contarRealizadas(p){ let n=0; for(const d of p.dias) if(d.f && d.f.trim()) n++; return n; }
@@ -257,9 +392,7 @@
         +'<div class="sesiones-cnt">'+contarRealizadas(p)+'/'+p.ses+' realizadas · '+contarPagadas(p)+' pagadas</div></td>'
         +'<td><input value="'+esc(p.os)+'" data-i="'+i+'" data-field="os"></td>'
         +'<td><input value="'+p.ses+'" style="text-align:center" data-i="'+i+'" data-field="ses"></td>'
-        +'<td><input value="'+esc(p.tel)+'" data-i="'+i+'" data-field="tel"></td>'
         +cells
-        +'<td><input placeholder="..." value="'+esc(p.obs)+'" data-i="'+i+'" data-field="obs"></td>'
         +'<td><button class="del-btn" onclick="delRow('+i+')" title="Eliminar paciente">✕</button></td></tr>';
     }
     document.getElementById('tbody').innerHTML=html;
