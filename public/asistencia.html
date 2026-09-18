@@ -213,6 +213,9 @@
   let DIRECCION='Cmte. Piedrabuena 820';
   // los recordatorios están en prueba: por ahora solo en la agenda de Julián
   const RECORDATORIOS_PROF=['julian'];
+  // Si WhatsApp te muestra rombos negros en vez de emojis, poné esto en false:
+  // el mensaje sale igual de ordenado, con negritas y párrafos, pero sin emojis.
+  const EMOJIS_EN_MENSAJE = true;
   (async()=>{
     try{
       const c=await (await fetch('/api/web')).json();
@@ -363,16 +366,17 @@
     const cuando = (fechaAgenda===hoyISO()) ? 'hoy' : fmtFechaLarga(fechaAgenda);
     const nombre = (t.nombre||'').split(' ')[0];
     const prof = PROF_NOMBRE[profActual]||'';
+    const e = k => EMOJIS_EN_MENSAJE ? (EMO[k]+' ') : '';
     return [
-      EMO.saludo+' *\u00a1Hola '+nombre+'!* \u00bfC\u00f3mo est\u00e1s?',
+      e('saludo')+'*\u00a1Hola '+nombre+'!* \u00bfC\u00f3mo est\u00e1s?',
       '',
-      EMO.fecha+' Te recordamos tu turno *'+cuando+' a las '+t.hora+' hs*',
-      EMO.casa+' Kine House \u00b7 con '+prof,
-      EMO.pin+' '+DIRECCION,
+      e('fecha')+'Te recordamos tu turno *'+cuando+' a las '+t.hora+' hs*',
+      e('casa')+'Kine House \u00b7 con '+prof,
+      e('pin')+DIRECCION,
       '',
-      EMO.aviso+' Si no pod\u00e9s concretar el turno, avisanos por esta v\u00eda as\u00ed liberamos el lugar.',
+      e('aviso')+'Si no pod\u00e9s concretar el turno, avisanos por esta v\u00eda as\u00ed liberamos el lugar.',
       '',
-      '\u00a1Muchas gracias! '+EMO.gracias
+      '\u00a1Muchas gracias!'+(EMOJIS_EN_MENSAJE ? ' '+EMO.gracias : '')
     ].join('\n');
   }
 
@@ -381,8 +385,12 @@
     const t=TURNOS_AGENDA[idx];
     const num=waNumero(t.telefono);
     if(!num) return;
+    const texto=mensajeRecordatorio(t);
     try{ localStorage.setItem(claveEnviado(t),'1'); }catch(e){}
-    window.open('https://wa.me/'+num+'?text='+encodeURIComponent(mensajeRecordatorio(t)),'_blank');
+    // Copia de respaldo: si WhatsApp de escritorio rompe los emojis del link,
+    // borrás lo que se pegó solo y pegás esto con Cmd+V, que va intacto.
+    try{ if(navigator.clipboard) navigator.clipboard.writeText(texto); }catch(e){}
+    window.open('https://wa.me/'+num+'?text='+encodeURIComponent(texto),'_blank');
     renderAgenda(TURNOS_AGENDA);
   }
 
@@ -402,7 +410,9 @@
     }
     document.getElementById('res-prox').textContent=prox;
     document.getElementById('ag-note-wa').textContent =
-      RECORDATORIOS_PROF.includes(profActual) ? 'Recordatorios por WhatsApp: en prueba, solo en esta agenda' : '';
+      RECORDATORIOS_PROF.includes(profActual)
+        ? 'Recordatorios por WhatsApp: en prueba, solo en esta agenda · el mensaje queda copiado, si se ven rombos pegalo con Cmd+V'
+        : '';
 
     if(!turnos.length){
       lista.innerHTML='<div class="ag-empty"><div class="ico">🗓</div>No hay turnos para este día</div>';
