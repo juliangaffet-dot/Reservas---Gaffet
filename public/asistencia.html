@@ -348,13 +348,32 @@
   function claveEnviado(t){ return 'kh_wa_'+fechaAgenda+'_'+t.id; }
   function yaEnviado(t){ try{ return !!localStorage.getItem(claveEnviado(t)); }catch(e){ return false; } }
 
+  // Los emojis van como códigos de escape (\uXXXX) para que no se rompan
+  // al copiar y pegar el archivo. WhatsApp muestra en negrita lo que va entre *asteriscos*.
+  const EMO = {
+    saludo: '\uD83D\uDC4B',      // 👋
+    fecha:  '\uD83D\uDCC5',      // 📅
+    casa:   '\uD83C\uDFE0',      // 🏠
+    pin:    '\uD83D\uDCCD',      // 📍
+    aviso:  '\u2757',            // ❗
+    gracias:'\uD83D\uDE4C'       // 🙌
+  };
+
   function mensajeRecordatorio(t){
-    const cuando = (fechaAgenda===hoyISO()) ? 'hoy' : 'el '+fmtFechaLarga(fechaAgenda);
+    const cuando = (fechaAgenda===hoyISO()) ? 'hoy' : fmtFechaLarga(fechaAgenda);
     const nombre = (t.nombre||'').split(' ')[0];
     const prof = PROF_NOMBRE[profActual]||'';
-    return 'Hola '+nombre+'! ¿Cómo estás? 👋 Te recordamos tu turno '+cuando+' a las '+t.hora+
-           ' en Kine House con '+prof+', '+DIRECCION+' 📍. En caso de no poder concretar el turno, '+
-           'por favor cancelalo por esta vía. ¡Muchas gracias! 🙌';
+    return [
+      EMO.saludo+' *\u00a1Hola '+nombre+'!* \u00bfC\u00f3mo est\u00e1s?',
+      '',
+      EMO.fecha+' Te recordamos tu turno *'+cuando+' a las '+t.hora+' hs*',
+      EMO.casa+' Kine House \u00b7 con '+prof,
+      EMO.pin+' '+DIRECCION,
+      '',
+      EMO.aviso+' Si no pod\u00e9s concretar el turno, avisanos por esta v\u00eda as\u00ed liberamos el lugar.',
+      '',
+      '\u00a1Muchas gracias! '+EMO.gracias
+    ].join('\n');
   }
 
   function enviarRecordatorio(idx, ev){
