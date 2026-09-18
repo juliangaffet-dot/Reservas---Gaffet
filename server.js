@@ -447,6 +447,7 @@ function paginaCancelacion(tipo, mensaje, turno) {
   const titulos = { error: 'No se pudo cancelar', ya_cancelado: 'Turno ya cancelado', exito: '¡Turno cancelado!' };
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Kine House</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" href="/icon-192.png">
   <style>body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
   .card{background:white;border-radius:16px;padding:40px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
   .icon{font-size:48px;margin-bottom:16px;}
@@ -465,6 +466,7 @@ function paginaConfirmarCancelacion(token, turno) {
   const prof = PROFESIONALES[turno.profesional] || PROFESIONALES.julian;
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Cancelar turno — Kine House</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" href="/icon-192.png">
   <style>body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
   .card{background:white;border-radius:16px;padding:40px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
   .icon{font-size:48px;margin-bottom:16px;}
@@ -950,6 +952,8 @@ ${mapaHTML}
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Kine House">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <title>Kine House — Centro de Kinesiología y Fisioterapia</title>
   <meta property="og:title" content="Kine House">
