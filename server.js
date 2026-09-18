@@ -837,6 +837,16 @@ function mapaEmbedSrc(ub){
   return 'https://maps.google.com/maps?q=' + encodeURIComponent(dir) + '&z=16&hl=es&output=embed';
 }
 
+// Fondo opcional de una sección: la imagen subida en el panel, con un velo
+// claro encima para que el texto se siga leyendo.
+const VELOS = { sinvelo: 0, suave: 0.45, medio: 0.70, fuerte: 0.88 };
+function fondoSeccion(sec, clave){
+  if (!hasMedia(clave)) return '';
+  const a = (sec && VELOS[sec.fondoVelo] !== undefined) ? VELOS[sec.fondoVelo] : VELOS.medio;
+  const velo = `linear-gradient(rgba(250,248,244,${a}),rgba(250,248,244,${a})),`;
+  return ` style="background-image:${velo}url(/media/${clave});background-size:cover;background-position:center;"`;
+}
+
 function logoSrcDe(){ return hasMedia('logo') ? '/media/logo' : '/03%20KINE%20ISO%20COMBINADO.png'; }
 
 // ─── RENDER DE LA LANDING DESDE LA CONFIG ────────────────────────────────────
@@ -877,7 +887,7 @@ function renderLanding(cfg){
   }).join('');
 
   const secServicios = se.visible===false ? '' : `
-  <section class="section" id="servicios">
+  <section class="section" id="servicios"${fondoSeccion(se,'fondo-servicios')}>
     <div class="wrap">
       <div class="sec-head">
         <div><span class="tag"><span class="dot"></span> Qué hacemos</span>
@@ -888,8 +898,9 @@ function renderLanding(cfg){
     </div>
   </section>`;
 
+  const fondoNos = fondoSeccion(no,'fondo-nosotros');
   const secNosotros = no.visible===false ? '' : `
-  <section class="section" style="padding-top:0;">
+  <section class="section"${fondoNos ? fondoNos.replace('style="','style="padding-top:58px;') : ' style="padding-top:0;"'}>
     <div class="wrap">
       <div class="about">
         <div class="about-txt">
@@ -905,8 +916,9 @@ function renderLanding(cfg){
     </div>
   </section>`;
 
+  const fondoEq = fondoSeccion(eq,'fondo-equipo');
   const secEquipo = eq.visible===false ? '' : `
-  <section class="section" style="padding-top:0;">
+  <section class="section"${fondoEq ? fondoEq.replace('style="','style="padding-top:58px;') : ' style="padding-top:0;"'}>
     <div class="wrap">
       <div class="sec-head"><div><span class="tag"><span class="dot"></span> Nuestro equipo</span>
         <h2 class="sec-title" style="margin-top:14px;">${esc(eq.titulo)}</h2></div></div>
@@ -914,10 +926,11 @@ function renderLanding(cfg){
     </div>
   </section>`;
 
+  const fondoCta = fondoSeccion(ct,'fondo-cta');
   const mapaHTML = (ub.visible===false || ub.mapaVisible===false) ? '' : `
     <iframe class="loc-map" src="${esc(mapaEmbedSrc(ub))}" title="Ubicación de Kine House" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>`;
   const secUbic = ub.visible===false ? '' : `
-  <section class="loc-band" id="ubicacion">
+  <section class="loc-band" id="ubicacion"${fondoSeccion(ub,'fondo-ubicacion')}>
     <div class="wrap loc-head">
       <span class="tag"><span class="dot"></span> Ubicación</span>
       <h2 class="addr">${esc(ub.direccion)}</h2>
@@ -1075,7 +1088,7 @@ ${mapaHTML}
 ${secServicios}
 ${secNosotros}
 ${secEquipo}
-  <section class="section" style="padding-top:0;" id="agendar">
+  <section class="section"${fondoCta ? fondoCta.replace('style="','style="padding-top:58px;') : ' style="padding-top:0;"'} id="agendar">
     <div class="wrap">
       <div class="close">
         <div class="close-cta">
@@ -1178,7 +1191,7 @@ app.post('/api/web', authPanel, (req, res) => {
 
 app.post('/api/web/upload', authPanel, (req, res) => {
   const { clave, dataUri } = req.body || {};
-  if (!/^(logo|hero|nosotros|turnero-hero|equipo-\d+)$/.test(clave)) return res.status(400).json({ error: 'Clave inválida' });
+  if (!/^(logo|hero|nosotros|turnero-hero|equipo-\d+|fondo-(servicios|nosotros|equipo|cta|ubicacion))$/.test(clave)) return res.status(400).json({ error: 'Clave inválida' });
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUri||'');
   if (!m) return res.status(400).json({ error: 'Imagen inválida' });
   db.prepare("INSERT INTO web_media (clave, mime, datos, actualizado) VALUES (?,?,?,datetime('now','-3 hours')) ON CONFLICT(clave) DO UPDATE SET mime=excluded.mime, datos=excluded.datos, actualizado=excluded.actualizado")
