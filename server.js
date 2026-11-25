@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const app = express();
 app.use(express.json({ limit: '14mb' }));
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // ─── BASE DE DATOS ────────────────────────────────────────────────────────────
 const fs = require('fs');
@@ -100,6 +100,32 @@ db.exec(`
   );
 `);
 
+// Horarios por defecto: replican exactamente los que estaban escritos en el
+// código del turnero. 'hasta' es la hora del ÚLTIMO turno del bloque.
+const DIAS_LABORALES = [1,2,3,4,5];
+function horariosProf(manana, tarde, exc){
+  const dias = {};
+  DIAS_LABORALES.forEach(d => {
+    const e = (exc && exc[d]) || {};
+    dias[d] = {
+      atiende: !e.cerrado,
+      manana: manana
+        ? { activo:true, desde: e.mananaDesde || manana.desde, hasta: e.mananaHasta || manana.hasta, cupos: manana.cupos }
+        : { activo:false, desde:'09:00', hasta:'11:30', cupos:3 },
+      tarde: tarde
+        ? { activo:true, desde: e.tardeDesde || tarde.desde, hasta: e.tardeHasta || tarde.hasta, cupos: tarde.cupos }
+        : { activo:false, desde:'15:00', hasta:'19:30', cupos:2 }
+    };
+  });
+  return { intervalo: 30, dias };
+}
+const DEFAULT_HORARIOS = {
+  julian:  horariosProf(null, { desde:'16:30', hasta:'19:30', cupos:2 }, { 3:{tardeHasta:'19:00'}, 5:{tardeHasta:'19:00'} }),
+  mauro:   horariosProf({ desde:'09:00', hasta:'11:30', cupos:3 }, { desde:'15:00', hasta:'18:30', cupos:2 }, { 5:{tardeHasta:'17:30'} }),
+  esteban: horariosProf(null, { desde:'15:00', hasta:'19:30', cupos:2 }, {})
+};
+function horariosGenericos(){ return horariosProf(null, { desde:'15:00', hasta:'19:30', cupos:2 }, {}); }
+
 // Config por defecto (se usa si el admin todavía no guardó nada)
 const DEFAULT_WEB = {
   color: "#8a8c52",
@@ -129,6 +155,7 @@ const DEFAULT_WEB = {
   equipo: {
     visible: true,
     titulo: "Profesionales matriculados",
+    mensajeWa: "Hola {nombre}! Te escribo desde la web de Kine House. Quer\u00eda hacerte una consulta.",
     items: [
       { iniciales: "JG", nombre: "Lic. Juli\u00e1n Gaffet", rol: "Kinesi\u00f3logo", mp: "M.P. 1321", tel: "" },
       { iniciales: "MA", nombre: "Lic. Mauro Ayub", rol: "Kinesi\u00f3logo", mp: "M.P. 1263", tel: "" },
@@ -139,7 +166,20 @@ const DEFAULT_WEB = {
     visible: true,
     direccion: "Cmte. Piedrabuena 820",
     ciudad: "Salta, Argentina",
-    maps: "https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5"
+    maps: "https://maps.app.goo.gl/aRSoRvJjGjk8eqDq5",
+    mapaVisible: true,
+    mapaEmbed: ""   // opcional: pegar el c\u00f3digo "Insertar un mapa" de Google Maps
+  },
+  horarios: DEFAULT_HORARIOS,
+  turnero: {
+    colorPropio: false,
+    color: "#8a8c52",
+    titulo: "Reservar turno",
+    sub: "Centro de Kinesiolog\u00eda y Fisioterapia \u00b7 Readaptaci\u00f3n F\u00edsica",
+    labelProfesional: "Eleg\u00ed tu profesional",
+    notaEmail: "\ud83d\udce7 Recibir\u00e1s una invitaci\u00f3n en tu email con recordatorio 30 minutos antes.",
+    exitoTitulo: "\u00a1Turno confirmado!",
+    exitoNota: "Revis\u00e1 tu email \u2014 te llegar\u00e1 una invitaci\u00f3n de Google Calendar con recordatorio 30 min antes."
   },
   cta: {
     titulo: "\u00bfListo para empezar?",
@@ -407,6 +447,7 @@ function paginaCancelacion(tipo, mensaje, turno) {
   const titulos = { error: 'No se pudo cancelar', ya_cancelado: 'Turno ya cancelado', exito: '¡Turno cancelado!' };
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Kine House</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" href="/icon-192.png">
   <style>body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
   .card{background:white;border-radius:16px;padding:40px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
   .icon{font-size:48px;margin-bottom:16px;}
@@ -425,6 +466,7 @@ function paginaConfirmarCancelacion(token, turno) {
   const prof = PROFESIONALES[turno.profesional] || PROFESIONALES.julian;
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Cancelar turno — Kine House</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" href="/icon-192.png">
   <style>body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
   .card{background:white;border-radius:16px;padding:40px 32px;max-width:420px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
   .icon{font-size:48px;margin-bottom:16px;}
@@ -770,12 +812,51 @@ function darken(hex, f){
   return '#'+h(r)+h(g)+h(b);
 }
 
+function lighten(hex, f){
+  // f: 0..1 cuánto blanco se le mezcla
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex||'').trim());
+  if(!m) return '#f2f2e9';
+  let r=parseInt(m[1],16), g=parseInt(m[2],16), b=parseInt(m[3],16);
+  r=Math.round(r+(255-r)*f); g=Math.round(g+(255-g)*f); b=Math.round(b+(255-b)*f);
+  const h=n=>('0'+n.toString(16)).slice(-2);
+  return '#'+h(r)+h(g)+h(b);
+}
+function colorPrincipal(cfg){
+  return (cfg.color && /^#?[a-f\d]{6}$/i.test(String(cfg.color).replace('#',''))) ? (cfg.color[0]==='#'?cfg.color:'#'+cfg.color) : '#8a8c52';
+}
+// Devuelve la URL para el <iframe> del mapa.
+// Si en el panel pegaron el código "Insertar un mapa" de Google, se usa ese src.
+// Si no, se arma uno con la dirección (no necesita API key).
+function mapaEmbedSrc(ub){
+  const pegado = String((ub && ub.mapaEmbed) || '').trim();
+  if (pegado) {
+    const m = /src\s*=\s*["']([^"']+)["']/i.exec(pegado);
+    const url = m ? m[1] : pegado;
+    if (/^https:\/\/(www\.)?google\.[a-z.]+\/maps\/embed|^https:\/\/maps\.google\.[a-z.]+\/maps\?/i.test(url)) return url;
+  }
+  const dir = [ub && ub.direccion, ub && ub.ciudad].filter(Boolean).join(', ')
+    || (DEFAULT_WEB.ubicacion.direccion + ', ' + DEFAULT_WEB.ubicacion.ciudad);
+  return 'https://maps.google.com/maps?q=' + encodeURIComponent(dir) + '&z=16&hl=es&output=embed';
+}
+
+// Fondo opcional de una sección: la imagen subida en el panel, con un velo
+// claro encima para que el texto se siga leyendo.
+const VELOS = { sinvelo: 0, suave: 0.45, medio: 0.70, fuerte: 0.88 };
+function fondoSeccion(sec, clave){
+  if (!hasMedia(clave)) return '';
+  const a = (sec && VELOS[sec.fondoVelo] !== undefined) ? VELOS[sec.fondoVelo] : VELOS.medio;
+  const velo = `linear-gradient(rgba(250,248,244,${a}),rgba(250,248,244,${a})),`;
+  return ` style="background-image:${velo}url(/media/${clave});background-size:cover;background-position:center;"`;
+}
+
+function logoSrcDe(){ return hasMedia('logo') ? '/media/logo' : '/03%20KINE%20ISO%20COMBINADO.png'; }
+
 // ─── RENDER DE LA LANDING DESDE LA CONFIG ────────────────────────────────────
 function renderLanding(cfg){
-  const olive = (cfg.color && /^#?[a-f\d]{6}$/i.test(cfg.color.replace('#',''))) ? (cfg.color[0]==='#'?cfg.color:'#'+cfg.color) : '#8a8c52';
+  const olive = colorPrincipal(cfg);
   const oliveDark = darken(olive, 0.28);
   const oliveDeep = darken(olive, 0.48);
-  const logoSrc = hasMedia('logo') ? '/media/logo' : '/03%20KINE%20ISO%20COMBINADO.png';
+  const logoSrc = logoSrcDe();
   const heroHas = hasMedia('hero');
   const nosHas  = hasMedia('nosotros');
 
@@ -787,14 +868,17 @@ function renderLanding(cfg){
   let servRows='';
   for(let i=0;i<servItems.length;i+=2){ servRows+=`<div class="brow">${servItems.slice(i,i+2).join('')}</div>`; }
 
+  const msgWaBase = (typeof eq.mensajeWa === 'string' && eq.mensajeWa.trim()) ? eq.mensajeWa : DEFAULT_WEB.equipo.mensajeWa;
   const teamItems = (eq.items||[]).map((m,i)=>{
     const tel = String(m.tel||'').replace(/[^\d]/g,'');
+    const msgWa = msgWaBase.replace(/\{nombre\}/g, String(m.nombre||'').trim());
+    const waHref = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(msgWa);
     const contacto = tel ? `
           <div class="tcontact">
             <button type="button" class="tcbtn" onclick="toggleContacto(${i})">Contactar</button>
             <div class="tcopts" id="tcopts-${i}">
               <a href="tel:+${tel}" class="tcopt call">📞 Llamar</a>
-              <a href="https://wa.me/${tel}" target="_blank" rel="noopener noreferrer" class="tcopt wa">💬 WhatsApp</a>
+              <a href="${esc(waHref)}" target="_blank" rel="noopener noreferrer" class="tcopt wa">💬 WhatsApp</a>
             </div>
           </div>` : '';
     const avatar = hasMedia('equipo-'+i)
@@ -805,7 +889,7 @@ function renderLanding(cfg){
   }).join('');
 
   const secServicios = se.visible===false ? '' : `
-  <section class="section" id="servicios">
+  <section class="section" id="servicios"${fondoSeccion(se,'fondo-servicios')}>
     <div class="wrap">
       <div class="sec-head">
         <div><span class="tag"><span class="dot"></span> Qué hacemos</span>
@@ -816,8 +900,9 @@ function renderLanding(cfg){
     </div>
   </section>`;
 
+  const fondoNos = fondoSeccion(no,'fondo-nosotros');
   const secNosotros = no.visible===false ? '' : `
-  <section class="section" style="padding-top:0;">
+  <section class="section"${fondoNos ? fondoNos.replace('style="','style="padding-top:58px;') : ' style="padding-top:0;"'}>
     <div class="wrap">
       <div class="about">
         <div class="about-txt">
@@ -833,8 +918,9 @@ function renderLanding(cfg){
     </div>
   </section>`;
 
+  const fondoEq = fondoSeccion(eq,'fondo-equipo');
   const secEquipo = eq.visible===false ? '' : `
-  <section class="section" style="padding-top:0;">
+  <section class="section"${fondoEq ? fondoEq.replace('style="','style="padding-top:58px;') : ' style="padding-top:0;"'}>
     <div class="wrap">
       <div class="sec-head"><div><span class="tag"><span class="dot"></span> Nuestro equipo</span>
         <h2 class="sec-title" style="margin-top:14px;">${esc(eq.titulo)}</h2></div></div>
@@ -842,13 +928,19 @@ function renderLanding(cfg){
     </div>
   </section>`;
 
+  const fondoCta = fondoSeccion(ct,'fondo-cta');
+  const mapaHTML = (ub.visible===false || ub.mapaVisible===false) ? '' : `
+    <iframe class="loc-map" src="${esc(mapaEmbedSrc(ub))}" title="Ubicación de Kine House" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>`;
   const secUbic = ub.visible===false ? '' : `
-        <div class="close-loc">
-          <span class="tag"><span class="dot"></span> Ubicación</span>
-          <div class="addr">${esc(ub.direccion)}</div>
-          <div class="city">${esc(ub.ciudad)}</div>
-          <a href="${esc(ub.maps)}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Ver en Google Maps ↗</a>
-        </div>`;
+  <section class="loc-band" id="ubicacion"${fondoSeccion(ub,'fondo-ubicacion')}>
+    <div class="wrap loc-head">
+      <span class="tag"><span class="dot"></span> Ubicación</span>
+      <h2 class="addr">${esc(ub.direccion)}</h2>
+      <div class="city">${esc(ub.ciudad)}</div>
+      <a href="${esc(ub.maps)}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Cómo llegar ↗</a>
+    </div>
+${mapaHTML}
+  </section>`;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -860,6 +952,8 @@ function renderLanding(cfg){
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Kine House">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <title>Kine House — Centro de Kinesiología y Fisioterapia</title>
   <meta property="og:title" content="Kine House">
@@ -949,15 +1043,20 @@ function renderLanding(cfg){
     .tcopt.wa{background:#25d366;color:#fff;}
     .tcopt.wa:hover{background:#1eb955;}
     @media(max-width:720px){ .team-grid{flex-direction:column;} .tmember{width:100%;margin-bottom:14px;} }
-    .close{display:flex;justify-content:space-between;}
-    .close-cta{width:57%;background:linear-gradient(150deg,var(--ink),var(--olive-deep));color:#fff;border-radius:30px;padding:52px 46px;position:relative;overflow:hidden;}
+    .close{display:block;}
+    .close-cta{width:100%;background:linear-gradient(150deg,var(--ink),var(--olive-deep));color:#fff;border-radius:30px;padding:52px 46px;position:relative;overflow:hidden;}
     .close-cta .blob{position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(199,100,60,0.25);top:-70px;right:-50px;filter:blur(6px);}
     .close-cta h2{font-family:var(--display);font-weight:600;font-size:34px;letter-spacing:-0.02em;margin-bottom:12px;position:relative;line-height:1.1;}
     .close-cta p{color:rgba(255,255,255,0.75);font-weight:300;margin-bottom:28px;position:relative;}
     .close-cta .btn-primary{background:#fff;color:var(--ink);position:relative;}
-    .close-loc{width:40%;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:40px 34px;display:flex;flex-direction:column;justify-content:center;}
-    .close-loc .tag{margin-bottom:16px;} .close-loc .addr{font-family:var(--display);font-size:22px;font-weight:600;margin-bottom:4px;} .close-loc .city{color:var(--muted);margin-bottom:22px;}
-    @media(max-width:760px){ .close{flex-direction:column;} .close-cta,.close-loc{width:100%;padding:36px 28px;margin-bottom:16px;} .close-cta h2{font-size:28px;} }
+    .loc-band{padding:26px 0 0;}
+    .loc-head{text-align:center;margin-bottom:38px;}
+    .loc-head .tag{margin-bottom:16px;}
+    .loc-head .addr{font-family:var(--display);font-size:38px;font-weight:600;letter-spacing:-0.02em;line-height:1.1;margin-bottom:6px;}
+    .loc-head .city{color:var(--muted);margin-bottom:24px;}
+    .loc-map{width:100%;height:440px;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:block;}
+    @media(max-width:760px){ .close-cta{padding:36px 28px;} .close-cta h2{font-size:28px;}
+      .loc-band{padding-top:14px;} .loc-head{margin-bottom:28px;} .loc-head .addr{font-size:27px;} .loc-map{height:300px;} }
     .footer{padding:50px 0 40px;border-top:1px solid var(--line);margin-top:80px;}
     .footer-inner{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px;align-items:center;}
     .footer-brand{display:flex;align-items:center;gap:11px;font-family:var(--display);font-size:19px;font-weight:600;}
@@ -993,7 +1092,7 @@ function renderLanding(cfg){
 ${secServicios}
 ${secNosotros}
 ${secEquipo}
-  <section class="section" style="padding-top:0;" id="agendar">
+  <section class="section"${fondoCta ? fondoCta.replace('style="','style="padding-top:58px;') : ' style="padding-top:0;"'} id="agendar">
     <div class="wrap">
       <div class="close">
         <div class="close-cta">
@@ -1002,12 +1101,12 @@ ${secEquipo}
           <p>${esc(ct.sub)}</p>
           <a href="/" class="btn btn-primary">Agendar un turno →</a>
         </div>
-${secUbic}
       </div>
     </div>
   </section>
+${secUbic}
 
-  <footer class="footer">
+  <footer class="footer"${(ub.visible!==false && ub.mapaVisible!==false) ? ' style="margin-top:0;"' : ''}>
     <div class="wrap">
       <div class="footer-inner">
         <a href="#top" class="footer-brand"><img class="iso" src="${logoSrc}" alt="">Kine House</a>
@@ -1039,6 +1138,55 @@ ${secUbic}
 </html>`;
 }
 
+// ─── RENDER DEL TURNERO (public/index.html + config) ──────────────────────────
+function renderTurnero(cfg){
+  const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+  const tuColor = cfg.turnero || {};
+  const olive = (tuColor.colorPropio === true)
+    ? colorPrincipal({ color: tuColor.color })
+    : colorPrincipal(cfg);
+  const oliveDark = darken(olive, 0.28);
+  const oliveDeep = darken(olive, 0.48);
+  const vars = `--olive:${olive};--olive-dark:${oliveDark};--olive-deep:${oliveDeep};`
+             + `--olive-soft:${lighten(olive, 0.88)};--olive-line:${lighten(olive, 0.55)};`;
+  const tu = Object.assign({}, DEFAULT_WEB.turnero, cfg.turnero || {});
+  const ub = cfg.ubicacion || {};
+  // horarios y cupos de cada profesional (lo editado en el panel, o el default)
+  const horarios = {};
+  Object.keys(PROFESIONALES).forEach(id => {
+    horarios[id] = (cfg.horarios && cfg.horarios[id]) || DEFAULT_HORARIOS[id] || horariosGenericos();
+  });
+  // foto de cada profesional: se reusa la que se subió en la sección Equipo
+  const fotosProf = {};
+  const equipoItems = (cfg.equipo && cfg.equipo.items) || [];
+  Object.keys(PROFESIONALES).forEach(id => {
+    const p = PROFESIONALES[id];
+    const i = equipoItems.findIndex(m =>
+      (String(m.mp||'').replace(/\D/g,'') && String(m.mp||'').replace(/\D/g,'') === String(p.mp)) ||
+      String(m.nombre||'').trim().toLowerCase() === String(p.nombre||'').trim().toLowerCase()
+    );
+    if (i >= 0 && hasMedia('equipo-' + i)) fotosProf[id] = '/media/equipo-' + i;
+  });
+  const data = {
+    titulo: tu.titulo, sub: tu.sub, labelProfesional: tu.labelProfesional,
+    notaEmail: tu.notaEmail, exitoTitulo: tu.exitoTitulo, exitoNota: tu.exitoNota,
+    direccion: ub.direccion || DEFAULT_WEB.ubicacion.direccion,
+    ciudad: ub.ciudad || DEFAULT_WEB.ubicacion.ciudad,
+    maps: ub.maps || DEFAULT_WEB.ubicacion.maps,
+    logo: logoSrcDe(),
+    heroFoto: hasMedia('turnero-hero') ? '/media/turnero-hero' : '',
+    mapa: mapaEmbedSrc(ub),
+    mapaVisible: !(ub.visible===false || ub.mapaVisible===false),
+    horarios: horarios,
+    fotosProf: fotosProf
+  };
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  return html
+    .replace('/*KH_VARS*/', vars)
+    .replace('/*KH_CFG*/', 'window.KH_CFG = Object.assign(window.KH_CFG, ' + json + ');')
+    .replace('content="#46482c"', 'content="' + oliveDeep + '"');
+}
+
 // ─── ENDPOINTS WEB ───────────────────────────────────────────────────────────
 app.get('/api/web', (req, res) => { res.json(getWebConfig()); });
 
@@ -1049,7 +1197,7 @@ app.post('/api/web', authPanel, (req, res) => {
 
 app.post('/api/web/upload', authPanel, (req, res) => {
   const { clave, dataUri } = req.body || {};
-  if (!/^(logo|hero|nosotros|equipo-\d+)$/.test(clave)) return res.status(400).json({ error: 'Clave inválida' });
+  if (!/^(logo|hero|nosotros|turnero-hero|equipo-\d+|fondo-(servicios|nosotros|equipo|cta|ubicacion))$/.test(clave)) return res.status(400).json({ error: 'Clave inválida' });
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUri||'');
   if (!m) return res.status(400).json({ error: 'Imagen inválida' });
   db.prepare("INSERT INTO web_media (clave, mime, datos, actualizado) VALUES (?,?,?,datetime('now','-3 hours')) ON CONFLICT(clave) DO UPDATE SET mime=excluded.mime, datos=excluded.datos, actualizado=excluded.actualizado")
@@ -1070,6 +1218,11 @@ app.get('/media/:clave', (req, res) => {
   res.send(Buffer.from(row.datos, 'base64'));
 });
 
+app.get('/', (req, res) => {
+  res.set('Cache-Control','no-cache');
+  try { res.send(renderTurnero(getWebConfig())); }
+  catch(e) { console.error('Error render turnero:', e.message); res.sendFile(path.join(__dirname, 'public', 'index.html')); }
+});
 app.get('/asistencia', (req, res) => res.sendFile(path.join(__dirname, 'public', 'asistencia.html')));
 app.get('/agenda', (req, res) => res.sendFile(path.join(__dirname, 'public', 'agenda.html')));
 app.get('/inicio', (req, res) => { res.set('Cache-Control','no-cache'); res.send(renderLanding(getWebConfig())); });
